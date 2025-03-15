@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 // Role Selection Page
@@ -48,6 +48,7 @@ import UserLayout from "./components/citizen/UserLayout";
 import News from "./pages/citizen/News";
 import StateLogin from "./components/state-head/StateLogin";
 import AdminLogin from "./components/district-head/AdminLogin";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -70,9 +71,12 @@ function App() {
 
 
 
-        {/* Citizen Routes */}
-        <Route path="/citizen" element={<UserLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}>
-          <Route index element={<Navigate to="/citizen/dashboard" replace />} />
+        {/* Citizen Routes (Only Accessible by Users with Role 'citizen') */}
+        <Route
+          path="/citizen/"
+              element={<UserLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}
+        
+        >  <Route index element={<Navigate to="/citizen/dashboard" replace />} />
           <Route path="dashboard" element={<CitizenDashboard />} />
           <Route path="alerts" element={<CitizenAlerts />} />
           <Route path="news" element={<News />} />
@@ -81,12 +85,19 @@ function App() {
           <Route path="contact" element={<Contact />} />
         </Route>
 
-        {/* District-Head Routes */}
+         {/* District-Head Routes (Only Accessible by Users with Role 'district-head') */}
 
         <Route path="/district-head/login" element={<AdminLogin />} />
 
-        <Route path="/district-head" element={<AdminLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}>
-          <Route index element={<Navigate to="/district-head/dashboard" replace />} />
+        <Route
+          path="/district-head/*"
+          element={
+            <ProtectedRoute
+              element={<AdminLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}
+              allowedRoles={["district-head"]}
+            />
+          }
+        >     <Route index element={<Navigate to="/district-head/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="alerts" element={<AdminAlerts />} />
           <Route path="trends" element={<AdminAlerts />} />
@@ -101,9 +112,16 @@ function App() {
         {/* ✅ StateLogin Route OUTSIDE of SuperAdminLayout */}
         <Route path="/state-head/login" element={<StateLogin />} />
 
-        {/* ✅ Protected Routes for State-Head Inside Layout */}
-        <Route path="/state-head" element={<SuperAdminLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}>
-          <Route index element={<Navigate to="/state-head/dashboard" replace />} />
+       {/* State-Head Routes (Only Accessible by Users with Role 'state-head') */}
+        <Route
+          path="/state-head/*"
+          element={
+            <ProtectedRoute
+              element={<SuperAdminLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}
+              allowedRoles={["state-head"]}
+            />
+          }
+        >   <Route index element={<Navigate to="/state-head/dashboard" replace />} />
           <Route path="dashboard" element={<SuperAdminDashboard />} />
           <Route path="alerts" element={<SuperAdminAlerts />} />
           <Route path="trends" element={<SuperAdminAlerts />} />
@@ -116,7 +134,7 @@ function App() {
 
 
         {/* Default Redirect */}
-        <Route path="*" element={<Navigate to="/citizen/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

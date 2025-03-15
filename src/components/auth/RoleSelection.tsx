@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Stethoscope, Briefcase, Shield } from "lucide-react"; // Use Stethoscope for Hospital
 
 const roles = [
-  { name: "User", icon: User, path: "/user/login" },
+  { name: "User", icon: User, path: "/citizen/" },
   { name: "Hospital", icon: Stethoscope, path: "/hospital/login" }, // Fixed Icon
   { name: "District Head", icon: Briefcase, path: "/district-head/login" },
   { name: "State Head", icon: Shield, path: "/state-head/login" },
@@ -11,6 +11,10 @@ const roles = [
 
 const RoleSelection = () => {
   const navigate = useNavigate();
+  // useEffect(() => {
+  //   localStorage.removeItem("role");
+  //   sessionStorage.removeItem("role");
+  // }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">

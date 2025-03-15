@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import navigation hook
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
@@ -11,8 +11,21 @@ function AdminLogin() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate(); // Initialize navigation
+  // ✅ Redirect to role selection if no role is found
+  // useEffect(() => {
+  //   const role = localStorage.getItem('role');
+  //   if (!role) {
+  //     navigate('/');
+  //   }
+  // }, [navigate]);
+    useEffect(() => {
+      localStorage.removeItem("role");
+      sessionStorage.removeItem("role");
+    }, []);
 
   const handleLogin = async (e) => {
+    localStorage.setItem("role", "district-head");
+    navigate("/district-head/dashboard"); // Redirect after login
     e.preventDefault();
     setError('');
 
@@ -38,7 +51,7 @@ function AdminLogin() {
       const data = await response.json();
 
       // Store authentication token if needed (Optional)
-      localStorage.setItem('stateHeadToken', data.token); 
+      // localStorage.setItem('stateHeadToken', data.token); 
 
       // Redirect to dashboard after successful login
       navigate('/district-head/dashboard');

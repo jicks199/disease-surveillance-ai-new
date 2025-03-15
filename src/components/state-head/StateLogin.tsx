@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import navigation hook
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
@@ -11,8 +11,13 @@ function StateLogin() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate(); // Initialize navigation
-
+   useEffect(() => {
+      localStorage.removeItem("role");
+      sessionStorage.removeItem("role");
+    }, []);
   const handleLogin = async (e) => {
+    localStorage.setItem("role", "state-head");
+  navigate("/state-head/dashboard");
     e.preventDefault();
     setError('');
 
@@ -36,9 +41,10 @@ function StateLogin() {
       }
 
       const data = await response.json();
+      console.log(data)
 
       // Store authentication token if needed (Optional)
-      localStorage.setItem('stateHeadToken', data.token); 
+      // localStorage.setItem('stateHeadToken', data.token); 
 
       // Redirect to dashboard after successful login
       navigate('/state-head/dashboard');
