@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
+import { logout } from '../../State/slices/authSlice'; 
+import { Link, useLocation, useNavigate } from 'react-router-dom';import { 
   LayoutDashboard, 
   Bell, 
   FileText, 
@@ -8,11 +8,19 @@ import {
   Users,
   Activity,
   Map,
-  Brain
+  Brain,
+  LogOut
 } from 'lucide-react';
+import { useDispatch } from 'react-redux';
 
 const SuperAdminSidebar = ({ isOpen }) => {
   const location = useLocation();
+  const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const handleLogout = () => {
+      dispatch(logout());
+      navigate('/'); // Redirect to login page after logout
+    };
 
   const menuItems = [
     { path: '/state-head/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -48,6 +56,14 @@ const SuperAdminSidebar = ({ isOpen }) => {
               </Link>
             );
           })}
+            {/* Logout Button */}
+            <button
+            onClick={handleLogout}
+            className="flex items-center w-full space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="font-medium">Logout</span>
+          </button>
         </nav>
       </div>
     </aside>

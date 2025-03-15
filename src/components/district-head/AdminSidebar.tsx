@@ -1,5 +1,7 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../State/slices/authSlice'; // Import logout action
 import { 
   LayoutDashboard, 
   Bell, 
@@ -8,11 +10,19 @@ import {
   Users,
   Activity,
   Map,
-  Brain
+  Brain,
+  LogOut // Add logout icon from Lucide
 } from 'lucide-react';
 
 const AdminSidebar = ({ isOpen }) => {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login'); // Redirect to login page after logout
+  };
 
   const menuItems = [
     { path: '/district-head/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -48,6 +58,15 @@ const AdminSidebar = ({ isOpen }) => {
               </Link>
             );
           })}
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center w-full space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="font-medium">Logout</span>
+          </button>
         </nav>
       </div>
     </aside>

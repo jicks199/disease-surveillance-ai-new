@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import navigation hook
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { setRole } from '../../State/slices/roleSlice';
+import { useDispatch } from 'react-redux';
 
 function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -18,51 +20,58 @@ function AdminLogin() {
   //     navigate('/');
   //   }
   // }, [navigate]);
-    useEffect(() => {
-      localStorage.removeItem("role");
-      sessionStorage.removeItem("role");
-    }, []);
+  
+
+  const dispatch = useDispatch(); // Use Redux dispatch
 
   const handleLogin = async (e) => {
-    localStorage.setItem("role", "district-head");
-    navigate("/district-head/dashboard"); // Redirect after login
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     try {
       setIsLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_VERCEL}/api/v1/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        throw new Error("Invalid credentials");
       }
 
-      const data = await response.json();
+      const result = await response.json();
+         
+          console.log(result);
+    
+          const userRole = result?.data?.role;
+          // console.log("Role received:", userRole);
+    
+          if (!userRole) {
+            throw new Error("Role not found in response");
+          }
+    
+          // Update Redux state
+          dispatch(setRole(userRole));
+          // console.log("Role set in Redux:", result.data.role);
 
-      // Store authentication token if needed (Optional)
-      // localStorage.setItem('stateHeadToken', data.token); 
-
-      // Redirect to dashboard after successful login
-      navigate('/district-head/dashboard');
-
+      // Navigate based on role
+      if (userRole === "district-head") {
+        navigate("/district-head/dashboard");
+      } else {
+        throw new Error("Invalid role received");
+      }
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">

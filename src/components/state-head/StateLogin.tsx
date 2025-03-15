@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import navigation hook
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { setRole } from '../../State/slices/roleSlice';
+import { logout } from '../../State/slices/authSlice'; 
+import { useDispatch } from 'react-redux';
+import { cloneDeep } from 'lodash';
 
+type data = {
+  _id: string;
+  role: string;
+};
 function StateLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,46 +19,56 @@ function StateLogin() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate(); // Initialize navigation
-   useEffect(() => {
-      localStorage.removeItem("role");
-      sessionStorage.removeItem("role");
-    }, []);
+  //  useEffect(() => {
+  //     localStorage.removeItem("role");
+  //     sessionStorage.removeItem("role");
+  //   }, []);
+    const dispatch = useDispatch(); // Use Redux dispatch
+
   const handleLogin = async (e) => {
-    localStorage.setItem("role", "state-head");
-  navigate("/state-head/dashboard");
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     try {
       setIsLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_VERCEL}/api/v1/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        throw new Error("Invalid credentials");
       }
 
-      const data = await response.json();
-      console.log(data)
+      const result = await response.json();
+     
+      // console.log(data);
 
-      // Store authentication token if needed (Optional)
-      // localStorage.setItem('stateHeadToken', data.token); 
+      const userRole = result?.data?.role;
+      // console.log("Role received:", userRole);
 
-      // Redirect to dashboard after successful login
-      navigate('/state-head/dashboard');
+      if (!userRole) {
+        throw new Error("Role not found in response");
+      }
 
+      // Update Redux state
+      dispatch(setRole(userRole));
+      // console.log("Role set in Redux:", result.data.role);
+
+      // Navigate based on role
+      if (userRole === "state-head") {
+        navigate("/state-head/dashboard");
+      } else {
+        throw new Error("Invalid role received");
+      }
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
