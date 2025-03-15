@@ -1,22 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import navigation hook
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { setRole } from '../../State/slices/roleSlice';
-import { logout } from '../../State/slices/authSlice'; 
-import { useDispatch } from 'react-redux';
-import { cloneDeep } from 'lodash';
-
-type data = {
-  _id: string;
-  role: string;
-};
+import { useEffect, useState } from "react";
+ import { Navigate, useNavigate } from "react-router-dom"; // Import navigation hook
+ import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+ import { useDispatch, useSelector } from "react-redux";
+ import { login } from "../../redux/new/authslice";
+ 
 function StateLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);    
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const navigate = useNavigate(); // Initialize navigation
   //  useEffect(() => {
@@ -36,11 +30,14 @@ function StateLogin() {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_VERCEL}/api/v1/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_VERCEL}/api/v1/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Invalid credentials");
@@ -48,21 +45,17 @@ function StateLogin() {
 
       const result = await response.json();
      
-      // console.log(data);
+      const userData = result?.data;
 
-      const userRole = result?.data?.role;
-      // console.log("Role received:", userRole);
-
-      if (!userRole) {
-        throw new Error("Role not found in response");
+      if (!userData?.role || !userData?.email) {
+        throw new Error("Invalid response from server");
       }
 
-      // Update Redux state
-      dispatch(setRole(userRole));
-      // console.log("Role set in Redux:", result.data.role);
+       // ✅ Dispatch login with email & role
+       dispatch(login({ email: userData.email, role: userData.role }));
 
-      // Navigate based on role
-      if (userRole === "state-head") {
+        // ✅ Navigate based on role
+        if (userData.role === "state-head") {
         navigate("/state-head/dashboard");
       } else {
         throw new Error("Invalid role received");
@@ -79,7 +72,9 @@ function StateLogin() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">State-Head Login</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+               State-Head Login
+             </h1>
             <p className="text-gray-600">AI Disease Surveillance System</p>
           </div>
 
@@ -115,7 +110,7 @@ function StateLogin() {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-12 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
