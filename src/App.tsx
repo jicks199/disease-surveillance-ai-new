@@ -38,8 +38,9 @@ import SuperAdminUsers from "./pages/state-head/Users";
 // Authentication Pages (Login & Signup)
 import CitizenLogin from "./pages/citizen/Login";
 import CitizenSignup from "./pages/citizen/Signup";
-import HospitalLogin from "./pages/hospital/Login";
-import HospitalSignup from "./pages/hospital/Signup";
+
+
+
 
 import AdminLayout from "./components/district-head/AdminLayout";
 import DiseaseMap from "./pages/district-head/DiseaseMap";
@@ -52,6 +53,9 @@ import News from "./pages/citizen/News";
 import StateLogin from "./components/state-head/StateLogin";
 import AdminLogin from "./components/district-head/AdminLogin";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import HospitalRegistrationForm from "./components/hospital/HospitalRegistrationForm";
+import HospitalLoginForm from "./components/hospital/HospitalLoginForm";
+import DiseaseDataEntry from "./components/hospital/DiseaseDataEntry";
 
 function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -69,8 +73,8 @@ function App() {
         {/* Authentication Routes */}
         <Route path="/citizen/login" element={<CitizenLogin role="user" />} />
         <Route path="/citizen/signup" element={<CitizenSignup role="user" />} />
-        <Route path="/hospital/login" element={<HospitalLogin />} />
-        <Route path="/hospital/signup" element={<HospitalSignup />} />
+
+
 
         {/* Citizen Routes (Only Accessible by Users with Role 'citizen') */}
         <Route
@@ -100,17 +104,17 @@ function App() {
           path="/district-head/*"
           element={
             <ProtectedRoute
-              element={
-                <AdminLayout
-                  isSidebarOpen={isSidebarOpen}
-                  toggleSidebar={toggleSidebar}
-                />
-              }
+            element={
+              <AdminLayout
+                isSidebarOpen={isSidebarOpen}
+                toggleSidebar={toggleSidebar}
+              />
+            }
               allowedRoles={["district-head"]}
               redirectPath="/district-head/login"
             />
           }
-        >
+          >
           {" "}
           <Route
             index
@@ -135,17 +139,12 @@ function App() {
           path="/state-head/*"
           element={
             <ProtectedRoute
-              element={
-                <SuperAdminLayout
-                  isSidebarOpen={isSidebarOpen}
-                  toggleSidebar={toggleSidebar}
-                />
-              }
+              element={<SuperAdminLayout isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />}
               allowedRoles={["state-head"]}
               redirectPath="/state-head/login"
             />
           }
-        >
+          >
           {" "}
           <Route
             index
@@ -160,6 +159,15 @@ function App() {
           <Route path="settings" element={<SuperAdminSettings />} />
           <Route path="users" element={<SuperAdminUsers />} />
         </Route>
+
+
+        <Route path="/hospital/login" element={<HospitalLoginForm />} />
+        <Route path="/hospital/register" element={<HospitalRegistrationForm />} />
+        <Route path="/hospital/dashboard" element={<DiseaseDataEntry />} />
+
+
+
+
 
         {/* Default Redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
