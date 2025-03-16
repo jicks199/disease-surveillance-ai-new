@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   LineChart,
   Line,
@@ -81,26 +81,26 @@ const StatCard = ({ icon: Icon, title, value, change, color = 'blue' }: StatCard
 const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('Last 30 days');
   const [chartType, setChartType] = useState('line');
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  // const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  // const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   // Handle SocketIO alerts
-  useEffect(() => {
-    socket.on('connect', () => console.log('Connected to SocketIO'));
-    socket.on('alert', (data: { message: string }) => {
-      console.log('Alert received:', data.message);
-      setAlertMessage(data.message);
-      setIsChatbotOpen(true);
-      setTimeout(() => {
-        setIsChatbotOpen(false);
-        setAlertMessage(null);
-      }, 10000); // Changed to 10 seconds
-    });
-    return () => {
-      socket.off('alert');
-      socket.off('connect');
-    };
-  }, []);
+  // useEffect(() => {
+  //   // socket.on('connect', () => console.log('Connected to SocketIO'));
+  //   socket.on('alert', (data: { message: string }) => {
+  //     console.log('Alert received:', data.message);
+  //     setAlertMessage(data.message);
+  //     setIsChatbotOpen(true);
+  //     setTimeout(() => {
+  //       setIsChatbotOpen(false);
+  //       setAlertMessage(null);
+  //     }, 10000); // Changed to 10 seconds
+  //   });
+  //   return () => {
+  //     socket.off('alert');
+  //     socket.off('connect');
+  //   };
+  // }, []);
 
   const handleDownload = () => {
     const csvContent = "data:text/csv;charset=utf-8,"
