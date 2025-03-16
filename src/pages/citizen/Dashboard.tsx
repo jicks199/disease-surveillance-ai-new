@@ -20,11 +20,11 @@ import {
   TrendingUp,
   Download,
   Calendar,
-  MessageSquare
+  // MessageSquare
 } from 'lucide-react';
-import io from 'socket.io-client';
+// import io from 'socket.io-client';
 
-const socket = io('http://127.0.0.1:5000');
+// const socket = io('http://127.0.0.1:5000');
 
 interface StatCardProps {
   icon: React.ElementType;
