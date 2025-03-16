@@ -48,8 +48,8 @@ const HospitalLoginForm: React.FC = () => {
         setApiMessage({ type: 'success', message: 'Welcome back! Login successful.' });
 
         // Extract token and hospital_id with fallback
-        const token = result.token || result.data?.token;
-        const hospitalId = result.hospital_id || result.data?.hospital_id;
+        const token = result.data.token || result.data?.token;
+        const hospitalId = result.data._id || result.data?.hospital_id;
 
         // Store token and hospital_id if present
         if (token) {

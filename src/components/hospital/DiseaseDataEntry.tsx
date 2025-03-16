@@ -1,16 +1,20 @@
 import React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Minus, Upload, Loader2 } from 'lucide-react';
 import Input from '../common/Input';
 
-// Updated schema with all fields from your JSON
+// Updated schema to match the desired JSON structure
 const diseaseSchema = z.object({
   hospital_id: z.string().min(1, 'Hospital ID is required'),
-  age_group: z.string().min(1, 'Age group is required'),
-  total_male: z.number().min(0, 'Total male must be 0 or greater'),
-  total_female: z.number().min(0, 'Total female must be 0 or greater'),
+  cases_by_age_gender: z.object({
+    '0-18': z.object({ male: z.number().min(0), female: z.number().min(0) }),
+    '19-35': z.object({ male: z.number().min(0), female: z.number().min(0) }),
+    '36-50': z.object({ male: z.number().min(0), female: z.number().min(0) }),
+    '51-65': z.object({ male: z.number().min(0), female: z.number().min(0) }),
+    '65+': z.object({ male: z.number().min(0), female: z.number().min(0) }),
+  }),
   name: z.string().min(1, 'Disease name is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   symptoms: z.array(z.string().min(1, 'Symptom cannot be empty')).min(1, 'At least one symptom is required'),
@@ -26,16 +30,17 @@ const diseaseSchema = z.object({
   occupied_beds: z.number().min(0, 'Occupied beds must be 0 or greater'),
   occupied_ventilators: z.number().min(0, 'Occupied ventilators must be 0 or greater'),
   occupied_oxygen: z.number().min(0, 'Occupied oxygen must be 0 or greater'),
-  isolation_ward_status: z.string().min(1, 'Isolation ward status is required'),
-  oxygen_supply_status: z.string().min(1, 'Oxygen supply status is required'),
-  ppe_kit_availability: z.string().min(1, 'PPE kit availability is required'),
+  isolation_ward_status: z.enum(['Available', 'Full', 'Not Available']),
+  oxygen_supply_status: z.enum(['Stable', 'Low', 'Critical']),
+  ppe_kit_availability: z.enum(['Sufficient', 'Limited', 'Out of Stock']),
   mortality_rate: z.number().min(0).max(100, 'Mortality rate must be between 0 and 100'),
   vaccinated_coverage: z.number().min(0).max(100, 'Vaccinated coverage must be between 0 and 100'),
-  symptoms_severity: z.string().min(1, 'Symptoms severity is required'),
-  seasonal_pattern: z.string().min(1, 'Seasonal pattern is required'),
+  symptoms_severity: z.enum(['Mild', 'Moderate', 'Severe', 'Critical']),
+  seasonal_pattern: z.enum(['Winter', 'Summer', 'Monsoon', 'All Seasons']),
   hospital_emergency_admission_rate: z.number().min(0).max(100, 'Admission rate must be between 0 and 100'),
   icu_utilization: z.number().min(0).max(100, 'ICU utilization must be between 0 and 100'),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  date: z.string().min(1, 'Date is required'), // Accepts any string format
+
 });
 
 type DiseaseData = z.infer<typeof diseaseSchema>;
@@ -44,25 +49,30 @@ const DiseaseDataEntry: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [apiMessage, setApiMessage] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [entryMethod, setEntryMethod] = React.useState<'manual' | 'upload' | null>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const {
     register,
-    control,
     handleSubmit,
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<DiseaseData>({
     resolver: zodResolver(diseaseSchema),
     defaultValues: {
       hospital_id: localStorage.getItem('hospital_id') || '',
-      age_group: '',
-      total_male: 0,
-      total_female: 0,
+      cases_by_age_gender: {
+        '0-18': { male: 0, female: 0 },
+        '19-35': { male: 0, female: 0 },
+        '36-50': { male: 0, female: 0 },
+        '51-65': { male: 0, female: 0 },
+        '65+': { male: 0, female: 0 },
+      },
       name: '',
       description: '',
-      symptoms: [''],
+      symptoms: [],
       mild_cases: 0,
       moderate_cases: 0,
       severe_cases: 0,
@@ -75,28 +85,46 @@ const DiseaseDataEntry: React.FC = () => {
       occupied_beds: 0,
       occupied_ventilators: 0,
       occupied_oxygen: 0,
-      isolation_ward_status: '',
-      oxygen_supply_status: '',
-      ppe_kit_availability: '',
+      isolation_ward_status: 'Available',
+      oxygen_supply_status: 'Stable',
+      ppe_kit_availability: 'Sufficient',
       mortality_rate: 0,
       vaccinated_coverage: 0,
-      symptoms_severity: '',
-      seasonal_pattern: '',
+      symptoms_severity: 'Mild',
+      seasonal_pattern: 'All Seasons',
       hospital_emergency_admission_rate: 0,
       icu_utilization: 0,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString(), // Full ISO format
     },
   });
 
-  const { fields: symptomFields, append: appendSymptom, remove: removeSymptom } = useFieldArray({
-    control,
-    name: 'symptoms',
-  });
+  // Predefined symptoms for checkbox selection
+  const predefinedSymptoms = [
+    'Fever',
+    'Cough',
+    'Shortness of Breath',
+    'Fatigue',
+    'Headache',
+    'Sore Throat',
+    'Nausea',
+    'Diarrhea',
+  ];
 
-  const { fields: hotspotFields, append: appendHotspot, remove: removeHotspot } = useFieldArray({
-    control,
-    name: 'hotspot',
-  });
+  // Watch the symptoms field to manage checkbox state
+  const selectedSymptoms = watch('symptoms') || [];
+
+  // Handle checkbox change for symptoms
+  const handleSymptomChange = (symptom: string, checked: boolean) => {
+    const currentSymptoms = selectedSymptoms || [];
+    if (checked) {
+      setValue('symptoms', [...currentSymptoms, symptom]);
+    } else {
+      setValue(
+        'symptoms',
+        currentSymptoms.filter((s) => s !== symptom)
+      );
+    }
+  };
 
   React.useEffect(() => {
     const hospitalId = localStorage.getItem('hospital_id');
@@ -114,23 +142,13 @@ const DiseaseDataEntry: React.FC = () => {
     const hospitalId = localStorage.getItem('hospital_id');
     const token = localStorage.getItem('authToken');
 
-    if (!hospitalId) {
-      setApiMessage({ type: 'error', message: 'Hospital ID is missing. Please log in again.' });
+    if (!hospitalId || !token) {
+      setApiMessage({ type: 'error', message: 'Authentication issue. Please log in again.' });
       setIsSubmitting(false);
       return;
     }
 
-    if (!token) {
-      setApiMessage({ type: 'error', message: 'Authentication token is missing. Please log in again.' });
-      setIsSubmitting(false);
-      return;
-    }
-
-    const requestData = {
-      ...data,
-      hospital_id: hospitalId,
-    };
-
+    const requestData = { ...data, hospital_id: hospitalId };
     console.log('Submitting Data:', requestData);
 
     try {
@@ -143,13 +161,8 @@ const DiseaseDataEntry: React.FC = () => {
         body: JSON.stringify(requestData),
       });
       const result = await response.json();
-      console.log('API Response:', result);
-
       if (response.ok && result.success) {
-        setApiMessage({
-          type: 'success',
-          message: `Disease added successfully! Hospital ID: ${hospitalId}`,
-        });
+        setApiMessage({ type: 'success', message: `Disease added successfully! Hospital ID: ${hospitalId}` });
         reset();
         setEntryMethod(null);
       } else {
@@ -163,67 +176,94 @@ const DiseaseDataEntry: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileUpload = async (file: File | null) => {
     if (!file) return;
 
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setApiMessage({ type: 'error', message: 'Authentication token is missing. Please log in again.' });
+    if (!file.name.endsWith('.xlsx')) {
+      setApiMessage({ type: 'error', message: 'Please upload only .xlsx files' });
+      return;
+    }
+
+    const hospitalId = localStorage.getItem('hospital_id');
+    if (!hospitalId) {
+      setApiMessage({ type: 'error', message: 'Hospital ID is missing.' });
       return;
     }
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('upload_preset', 'Disease');
+    formData.append('folder', 'diseases-files');
 
     setIsSubmitting(true);
     setApiMessage(null);
 
     try {
-      const response = await fetch('https://diseases-backend-pi.vercel.app/api/v1/hospital/disease/bulk-upload', {
+      const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/djhsyvxvy/raw/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         body: formData,
       });
-      const result = await response.json();
-      console.log('Upload API Response:', result);
 
-      if (response.ok && result.success) {
-        setApiMessage({
-          type: 'success',
-          message: `Disease added successfully! Processed ${result.processed} records.${
-            result.failed ? ` Failed: ${result.failed}` : ''
-          }`,
-        });
-        setEntryMethod(null);
-      } else {
-        setApiMessage({ type: 'error', message: result.message || 'Upload failed' });
+      const cloudinaryResult = await cloudinaryResponse.json();
+      if (!cloudinaryResponse.ok) {
+        throw new Error(cloudinaryResult.error?.message || 'Failed to upload file to Cloudinary');
       }
+
+      const backendData = { hospital_id: hospitalId, fileUrl: cloudinaryResult.secure_url };
+      const backendResponse = await fetch('https://diseases-backend-pi.vercel.app/api/v1/hospital/disease/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(backendData),
+      });
+
+      const backendResult = await backendResponse.json();
+      if (!backendResponse.ok) {
+        throw new Error(backendResult.message || 'Failed to process file in backend');
+      }
+
+      setApiMessage({ type: 'success', message: backendResult.message || 'Disease data uploaded successfully!' });
+      setEntryMethod(null);
     } catch (error) {
-      console.error('Upload Fetch Error:', error);
-      setApiMessage({ type: 'error', message: 'An error occurred during file upload.' });
+      console.error('Upload Error:', error);
+      setApiMessage({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'An error occurred during file upload.',
+      });
     } finally {
       setIsSubmitting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // Age group options for dropdown
-  const ageGroupOptions = [
-    '0-17',
-    '18-25',
-    '26-40',
-    '41-60',
-    '61+',
-  ];
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) handleFileUpload(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  };
+
+  const ageGroups = ['0-18', '19-35', '36-50', '51-65', '65+'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Disease Data Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Disease Registration Form</h1>
 
           {apiMessage && (
             <div
@@ -267,312 +307,343 @@ const DiseaseDataEntry: React.FC = () => {
 
               {entryMethod === 'upload' && (
                 <section className="mb-12">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Upload Disease Data</h2>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept=".xlsx,.xls,.csv"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="file-upload"
-                      disabled={isSubmitting}
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                    >
-                      <Upload className="h-5 w-5 mr-2" />
-                      Upload File
-                    </label>
-                    <span className="text-sm text-gray-500">Supported: .xlsx, .xls, .csv</span>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Upload Disease Data</h2>
+                  <div
+                    className={`relative group rounded-xl border-2 transition-all duration-200 ${
+                      isDragging
+                        ? 'border-indigo-500 bg-indigo-50/50 shadow-lg'
+                        : 'border-gray-200 bg-gray-50 hover:border-indigo-300'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <div className="p-8 text-center">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept=".xlsx"
+                        onChange={handleFileInputChange}
+                        className="hidden"
+                        id="file-upload"
+                        disabled={isSubmitting}
+                      />
+                      <div className="flex flex-col items-center gap-4">
+                        <div
+                          className={`p-3 rounded-full ${
+                            isDragging ? 'bg-indigo-100' : 'bg-gray-100'
+                          } transition-colors duration-200`}
+                        >
+                          <Upload className={`h-8 w-8 ${isDragging ? 'text-indigo-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-gray-700 font-medium">
+                            {isDragging ? 'Drop your file here!' : 'Drag & drop your file here'}
+                          </p>
+                          <p className="text-sm text-gray-500">or</p>
+                        </div>
+                        <label
+                          htmlFor="file-upload"
+                          className={`inline-flex items-center px-5 py-2.5 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-md transition-all duration-200 ${
+                            isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          <Upload className="h-5 w-5 mr-2" />
+                          Browse Files
+                        </label>
+                      </div>
+                      <div className="mt-4 text-sm text-gray-500">Supported format: .xlsx only | Maximum size: 10MB</div>
+                      {isSubmitting && (
+                        <div className="mt-6 flex items-center justify-center gap-2 text-indigo-600">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span className="text-sm">Uploading...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </section>
               )}
 
               {entryMethod === 'manual' && (
-                <section>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-6">Manual Disease Entry</h2>
+                <section className="space-y-8">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Manual Disease Entry</h2>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                    {/* Basic Info */}
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      <Input
-                        label="Disease Name"
-                        {...register('name')}
-                        error={errors.name?.message}
-                        placeholder="Enter disease name"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      <Input
-                        label="Disease Type"
-                        {...register('disease_type')}
-                        error={errors.disease_type?.message}
-                        placeholder="e.g., Viral, Bacterial"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      <div className="md:col-span-2">
-                        <Input
-                          label="Description"
-                          multiline
-                          {...register('description')}
-                          error={errors.description?.message}
-                          placeholder="Enter disease description"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
+                    {/* Basic Information */}
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-xl font-semibold text-gray-700 mb-4">Basic Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Disease Name</label>
+                          <Input
+                            {...register('name')}
+                            error={errors.name?.message}
+                            placeholder="Enter disease name"
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Disease Type</label>
+                          <Input
+                            {...register('disease_type')}
+                            error={errors.disease_type?.message}
+                            placeholder="e.g., Viral, Bacterial"
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Description</label>
+                          <Input
+                            multiline
+                            {...register('description')}
+                            error={errors.description?.message}
+                            placeholder="Enter disease description"
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          />
+                        </div>
+                        <div>
+  <label className="block text-sm font-medium text-gray-600 mb-1">Date</label>
+  <Input
+    type="datetime-local"
+    defaultValue={new Date().toISOString().slice(0, 16)} // Ensure format is "YYYY-MM-DDTHH:MM"
+    {...register('date', {
+      setValueAs: (value) => (value ? value.slice(0, 16) : ''), // Ensures format is "YYYY-MM-DDTHH:MM"
+    })}
+    error={errors.date?.message}
+    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+  />
+</div>
+
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Age Group</label>
-                        <select
-                          {...register('age_group')}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="">Select age group</option>
-                          {ageGroupOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
+                    </div>
+
+                    {/* Cases by Age and Gender */}
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-xl font-semibold text-gray-700 mb-4">Cases by Age and Gender</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {ageGroups.map((ageGroup) => (
+                          <div key={ageGroup} className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-600">{ageGroup}</label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                {...register(`cases_by_age_gender.${ageGroup}.male`, { valueAsNumber: true })}
+                                placeholder="Male"
+                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                              />
+                              <Input
+                                type="number"
+                                {...register(`cases_by_age_gender.${ageGroup}.female`, { valueAsNumber: true })}
+                                placeholder="Female"
+                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                              />
+                            </div>
+                            <div className="flex gap-4">
+                              {errors.cases_by_age_gender?.[ageGroup]?.male && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.cases_by_age_gender[ageGroup].male.message}
+                                </p>
+                              )}
+                              {errors.cases_by_age_gender?.[ageGroup]?.female && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.cases_by_age_gender[ageGroup].female.message}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Symptoms and Hotspots */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-gray-50 p-6 rounded-lg">
+                        <h3 className="text-xl font-semibold text-gray-700 mb-4">Symptoms</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          {predefinedSymptoms.map((symptom) => (
+                            <label key={symptom} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedSymptoms.includes(symptom)}
+                                onChange={(e) => handleSymptomChange(symptom, e.target.checked)}
+                                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                              />
+                              <span className="text-sm text-gray-700">{symptom}</span>
+                            </label>
                           ))}
-                        </select>
-                        {errors.age_group && (
-                          <p className="text-red-500 text-sm mt-1">{errors.age_group.message}</p>
-                        )}
+                        </div>
+                        {errors.symptoms && <p className="text-red-500 text-sm mt-4">{errors.symptoms.message}</p>}
                       </div>
-                      <Input
-                        label="Total Male"
-                        type="number"
-                        {...register('total_male', { valueAsNumber: true })}
-                        error={errors.total_male?.message}
-                        placeholder="Enter total male cases"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      <Input
-                        label="Total Female"
-                        type="number"
-                        {...register('total_female', { valueAsNumber: true })}
-                        error={errors.total_female?.message}
-                        placeholder="Enter total female cases"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      <Input
-                        label="Date"
-                        type="date"
-                        {...register('date')}
-                        error={errors.date?.message}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-
-                    {/* Symptoms */}
-                    <div className="bg-gray-50 p-6 rounded-xl">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Symptoms</label>
-                      {symptomFields.map((field, index) => (
-                        <div key={field.id} className="flex items-center gap-2 mb-3">
-                          <input
-                            {...register(`symptoms.${index}`)}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Enter symptom"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeSymptom(index)}
-                            className="p-2 text-red-500 hover:text-red-600 transition-colors"
-                          >
-                            <Minus size={20} />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => appendSymptom('')}
-                        className="inline-flex items-center text-indigo-600 hover:text-indigo-700 transition-colors"
-                      >
-                        <Plus size={20} className="mr-1" />
-                        Add Symptom
-                      </button>
-                      {errors.symptoms && <p className="text-red-500 text-sm mt-1">{errors.symptoms.message}</p>}
-                    </div>
-
-                    {/* Hotspots */}
-                    <div className="bg-gray-50 p-6 rounded-xl">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Hotspots</label>
-                      {hotspotFields.map((field, index) => (
-                        <div key={field.id} className="flex items-center gap-2 mb-3">
-                          <input
-                            {...register(`hotspot.${index}`)}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Enter location"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeHotspot(index)}
-                            className="p-2 text-red-500 hover:text-red-600 transition-colors"
-                          >
-                            <Minus size={20} />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => appendHotspot('')}
-                        className="inline-flex items-center text-indigo-600 hover:text-indigo-700 transition-colors"
-                      >
-                        <Plus size={20} className="mr-1" />
-                        Add Hotspot
-                      </button>
-                      {errors.hotspot && <p className="text-red-500 text-sm mt-1">{errors.hotspot.message}</p>}
+                      <div className="bg-gray-50 p-6 rounded-lg">
+                        <h3 className="text-xl font-semibold text-gray-700 mb-4">Hotspots</h3>
+                        <Input
+                          {...register('hotspot.0')}
+                          placeholder="Enter hotspot location (e.g., Area 1)"
+                          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all mb-2"
+                        />
+                        <Input
+                          {...register('hotspot.1')}
+                          placeholder="Enter hotspot location (e.g., Area 2)"
+                          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                        />
+                        {errors.hotspot && <p className="text-red-500 text-sm mt-2">{errors.hotspot.message}</p>}
+                      </div>
                     </div>
 
                     {/* Case Statistics */}
-                    <div className="bg-gray-50 p-6 rounded-xl">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Case Statistics</h3>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <Input
-                          label="Mild Cases"
-                          type="number"
-                          {...register('mild_cases', { valueAsNumber: true })}
-                          error={errors.mild_cases?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Moderate Cases"
-                          type="number"
-                          {...register('moderate_cases', { valueAsNumber: true })}
-                          error={errors.moderate_cases?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Severe Cases"
-                          type="number"
-                          {...register('severe_cases', { valueAsNumber: true })}
-                          error={errors.severe_cases?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Total Deaths"
-                          type="number"
-                          {...register('total_deaths', { valueAsNumber: true })}
-                          error={errors.total_deaths?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Total Cases Registered"
-                          type="number"
-                          {...register('total_case_registered', { valueAsNumber: true })}
-                          error={errors.total_case_registered?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Active Cases"
-                          type="number"
-                          {...register('active_case', { valueAsNumber: true })}
-                          error={errors.active_case?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-xl font-semibold text-gray-700 mb-4">Case Statistics</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                          { name: 'mild_cases', label: 'Mild Cases' },
+                          { name: 'moderate_cases', label: 'Moderate Cases' },
+                          { name: 'severe_cases', label: 'Severe Cases' },
+                          { name: 'total_case_registered', label: 'Total Cases Registered' },
+                          { name: 'active_case', label: 'Active Cases' },
+                          { name: 'total_deaths', label: 'Total Deaths' },
+                        ].map((field) => (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">{field.label}</label>
+                            <Input
+                              type="number"
+                              {...register(field.name, { valueAsNumber: true })}
+                              error={errors[field.name]?.message}
+                              placeholder={`Enter ${field.label.toLowerCase()}`}
+                              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
 
                     {/* Resource Utilization */}
-                    <div className="bg-gray-50 p-6 rounded-xl">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Resource Utilization</h3>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <Input
-                          label="Occupied Beds"
-                          type="number"
-                          {...register('occupied_beds', { valueAsNumber: true })}
-                          error={errors.occupied_beds?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Occupied Ventilators"
-                          type="number"
-                          {...register('occupied_ventilators', { valueAsNumber: true })}
-                          error={errors.occupied_ventilators?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Occupied Oxygen (L/day)"
-                          type="number"
-                          {...register('occupied_oxygen', { valueAsNumber: true })}
-                          error={errors.occupied_oxygen?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Isolation Ward Status"
-                          {...register('isolation_ward_status')}
-                          error={errors.isolation_ward_status?.message}
-                          placeholder="e.g., Available, Full"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Oxygen Supply Status"
-                          {...register('oxygen_supply_status')}
-                          error={errors.oxygen_supply_status?.message}
-                          placeholder="e.g., Stable, Low"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="PPE Kit Availability"
-                          {...register('ppe_kit_availability')}
-                          error={errors.ppe_kit_availability?.message}
-                          placeholder="e.g., Sufficient, Limited"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-xl font-semibold text-gray-700 mb-4">Resource Utilization</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                          { name: 'occupied_beds', label: 'Occupied Beds', type: 'number' },
+                          { name: 'occupied_ventilators', label: 'Occupied Ventilators', type: 'number' },
+                          { name: 'occupied_oxygen', label: 'Occupied Oxygen (L/day)', type: 'number' },
+                        ].map((field) => (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">{field.label}</label>
+                            <Input
+                              type="number"
+                              {...register(field.name, { valueAsNumber: true })}
+                              error={errors[field.name]?.message}
+                              placeholder={`Enter ${field.label.toLowerCase()}`}
+                              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Isolation Ward Status</label>
+                          <select
+                            {...register('isolation_ward_status')}
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          >
+                            {['Available', 'Full', 'Not Available'].map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.isolation_ward_status && (
+                            <p className="text-red-500 text-sm mt-1">{errors.isolation_ward_status.message}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Oxygen Supply Status</label>
+                          <select
+                            {...register('oxygen_supply_status')}
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          >
+                            {['Stable', 'Low', 'Critical'].map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.oxygen_supply_status && (
+                            <p className="text-red-500 text-sm mt-1">{errors.oxygen_supply_status.message}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">PPE Kit Availability</label>
+                          <select
+                            {...register('ppe_kit_availability')}
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          >
+                            {['Sufficient', 'Limited', 'Out of Stock'].map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.ppe_kit_availability && (
+                            <p className="text-red-500 text-sm mt-1">{errors.ppe_kit_availability.message}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {/* Disease Characteristics */}
-                    <div className="bg-gray-50 p-6 rounded-xl">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Disease Characteristics</h3>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <Input
-                          label="Mortality Rate (%)"
-                          type="number"
-                          {...register('mortality_rate', { valueAsNumber: true })}
-                          error={errors.mortality_rate?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Vaccinated Coverage (%)"
-                          type="number"
-                          {...register('vaccinated_coverage', { valueAsNumber: true })}
-                          error={errors.vaccinated_coverage?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Disease Recovery Rate (%)"
-                          type="number"
-                          {...register('disease_recovery_rate', { valueAsNumber: true })}
-                          error={errors.disease_recovery_rate?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Symptoms Severity"
-                          {...register('symptoms_severity')}
-                          error={errors.symptoms_severity?.message}
-                          placeholder="e.g., Mild, Moderate, Severe"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Seasonal Pattern"
-                          {...register('seasonal_pattern')}
-                          error={errors.seasonal_pattern?.message}
-                          placeholder="e.g., Winter, All Seasons"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="Emergency Admission Rate (%)"
-                          type="number"
-                          {...register('hospital_emergency_admission_rate', { valueAsNumber: true })}
-                          error={errors.hospital_emergency_admission_rate?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <Input
-                          label="ICU Utilization (%)"
-                          type="number"
-                          {...register('icu_utilization', { valueAsNumber: true })}
-                          error={errors.icu_utilization?.message}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-xl font-semibold text-gray-700 mb-4">Disease Characteristics</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                          { name: 'disease_recovery_rate', label: 'Recovery Rate (%)', type: 'number' },
+                          { name: 'mortality_rate', label: 'Mortality Rate (%)', type: 'number' },
+                          { name: 'vaccinated_coverage', label: 'Vaccinated Coverage (%)', type: 'number' },
+                          {
+                            name: 'hospital_emergency_admission_rate',
+                            label: 'Emergency Admission Rate (%)',
+                            type: 'number',
+                          },
+                          { name: 'icu_utilization', label: 'ICU Utilization (%)', type: 'number' },
+                        ].map((field) => (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">{field.label}</label>
+                            <Input
+                              type="number"
+                              {...register(field.name, { valueAsNumber: true })}
+                              error={errors[field.name]?.message}
+                              placeholder={`Enter ${field.label.toLowerCase()}`}
+                              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Symptoms Severity</label>
+                          <select
+                            {...register('symptoms_severity')}
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          >
+                            {['Mild', 'Moderate', 'Severe', 'Critical'].map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.symptoms_severity && (
+                            <p className="text-red-500 text-sm mt-1">{errors.symptoms_severity.message}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Seasonal Pattern</label>
+                          <select
+                            {...register('seasonal_pattern')}
+                            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                          >
+                            {['Winter', 'Summer', 'Monsoon', 'All Seasons'].map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.seasonal_pattern && (
+                            <p className="text-red-500 text-sm mt-1">{errors.seasonal_pattern.message}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -581,15 +652,15 @@ const DiseaseDataEntry: React.FC = () => {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+                        className="px-8 py-3 bg-indigo-600 text-white rounded-md font-semibold hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                       >
                         {isSubmitting ? (
                           <>
                             <Loader2 className="h-5 w-5 animate-spin" />
-                            <span>Submitting...</span>
+                            Submitting...
                           </>
                         ) : (
-                          <span>Submit Disease Data</span>
+                          'Submit Disease Data'
                         )}
                       </button>
                     </div>
