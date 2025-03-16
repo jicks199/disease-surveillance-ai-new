@@ -11,10 +11,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
-<<<<<<< HEAD
-=======
     "@hookform/resolvers": "^4.1.3",
->>>>>>> b9cf5450c51f0d1cc7f800f9d10960660d3810f5
     "@reduxjs/toolkit": "^2.6.1",
     "@visx/geo": "^3.12.0",
     "@visx/responsive": "^3.12.0",
@@ -28,16 +25,6 @@
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-<<<<<<< HEAD
-    "react-icons": "^5.5.0",
-    "react-leaflet": "^4.2.1",
-    "react-redux": "^9.2.0",
-    "react-router-dom": "^6.22.3",
-    "recharts": "^2.15.1",
-    "socket.io-client": "^4.8.1",
-    "tailwind-merge": "^3.0.2",
-    "topojson-client": "^3.1.0"
-=======
     "react-hook-form": "^7.54.2",
     "react-icons": "^5.5.0",
     "react-leaflet": "^4.2.1",
@@ -49,7 +36,6 @@
     "topojson-client": "^3.1.0",
     "zod": "^3.24.2",
     "zustand": "^5.0.3"
->>>>>>> b9cf5450c51f0d1cc7f800f9d10960660d3810f5
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
@@ -63,11 +49,7 @@
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
     "postcss": "^8.4.35",
-<<<<<<< HEAD
-    "tailwindcss": "^3.4.1",
-=======
     "tailwindcss": "^3.4.17",
->>>>>>> b9cf5450c51f0d1cc7f800f9d10960660d3810f5
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2"
