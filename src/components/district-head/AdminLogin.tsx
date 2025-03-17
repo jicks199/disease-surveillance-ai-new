@@ -50,7 +50,7 @@ function AdminLogin() {
       dispatch(login({ email: userData.email, role: userData.role }));
 
       // ✅ Navigate based on role
-      if (userData.role === "admin") {
+      if (userData.role === "district-head") {
         navigate("/district-head/dashboard");
       } else {
         throw new Error("Invalid role received");
