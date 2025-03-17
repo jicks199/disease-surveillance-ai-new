@@ -247,7 +247,9 @@ const DiseaseDataEntry: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://diseases-backend-pi.vercel.app/api/v1/hospital/disease/register",
+        `${import.meta.env.VITE_API_VERCEL}/api/v1/hospital/disease/register`,
+
+        // "https://diseases-backend-pi.vercel.app/api/v1/hospital/disease/register",
         {
           method: "POST",
           headers: {
@@ -282,7 +284,9 @@ const DiseaseDataEntry: React.FC = () => {
       } else {
         setApiMessage({
           type: "error",
-          message: result.message || `Error ${response.status}: Failed to create disease`,
+          message:
+            result.message ||
+            `Error ${response.status}: Failed to create disease`,
         });
       }
     } catch (error) {
@@ -343,7 +347,8 @@ const DiseaseDataEntry: React.FC = () => {
         fileUrl: cloudinaryResult.secure_url,
       };
       const backendResponse = await fetch(
-        "https://diseases-backend-pi.vercel.app/api/v1/hospital/disease/upload",
+        `${import.meta.env.VITE_API_VERCEL}/api/v1/hospital/disease/upload`,
+        // "https://diseases-backend-pi.vercel.app/api/v1/hospital/disease/upload",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
