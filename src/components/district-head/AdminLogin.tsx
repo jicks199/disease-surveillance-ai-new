@@ -1,28 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import navigation hook
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { setRole } from '../../State/slices/roleSlice';
-import { useDispatch } from 'react-redux';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { login } from "../../redux/new/authslice"; // Import login action
 
 function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);    
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const navigate = useNavigate(); // Initialize navigation
-  // ✅ Redirect to role selection if no role is found
-  // useEffect(() => {
-  //   const role = localStorage.getItem('role');
-  //   if (!role) {
-  //     navigate('/');
-  //   }
-  // }, [navigate]);
-  
-
-  const dispatch = useDispatch(); // Use Redux dispatch
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -35,33 +26,31 @@ function AdminLogin() {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_VERCEL}/api/v1/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_VERCEL}/api/v1/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Invalid credentials");
       }
 
       const result = await response.json();
-         
-          console.log(result);
-    
-          const userRole = result?.data?.role;
-          // console.log("Role received:", userRole);
-    
-          if (!userRole) {
-            throw new Error("Role not found in response");
-          }
-    
-          // Update Redux state
-          dispatch(setRole(userRole));
-          // console.log("Role set in Redux:", result.data.role);
+      const userData = result?.data;
 
-      // Navigate based on role
-      if (userRole === "district-head") {
+      if (!userData?.role || !userData?.email) {
+        throw new Error("Invalid response from server");
+      }
+
+      // ✅ Dispatch login action
+      dispatch(login({ email: userData.email, role: userData.role }));
+
+      // ✅ Navigate based on role
+      if (userData.role === "admin") {
         navigate("/district-head/dashboard");
       } else {
         throw new Error("Invalid role received");
@@ -72,12 +61,13 @@ function AdminLogin() {
       setIsLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">District Head Login</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h1>
             <p className="text-gray-600">AI Disease Surveillance System</p>
           </div>
 
@@ -100,7 +90,7 @@ function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter your government email"
+                  placeholder="Enter your admin email"
                 />
               </div>
             </div>
@@ -113,7 +103,7 @@ function AdminLogin() {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-12 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -124,11 +114,7 @@ function AdminLogin() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
@@ -157,9 +143,9 @@ function AdminLogin() {
               type="submit"
               disabled={isLoading}
               className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors
-                ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                ${isLoading ? "opacity-75 cursor-not-allowed" : ""}`}
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </form>
         </div>
