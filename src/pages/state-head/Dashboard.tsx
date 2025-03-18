@@ -1,12 +1,17 @@
-// import React, { useState, useEffect } from 'react';
-import AdminTrends from '../../components/state-head/SuperAdminTrends';
-import { Activity, Users, AlertTriangle, Guitar as Hospital } from 'lucide-react';
-// import io from 'socket.io-client';
-
-// const socket = io('http://127.0.0.1:5000'); // Connect to Flask backend
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import AdminTrends from "../../components/state-head/SuperAdminTrends";
+import SuperAlerts from "../../components/state-head/SuperOutbreakAlerts";
+import {
+  Activity,
+  Users,
+  AlertTriangle,
+  Guitar as Hospital,
+  Users as AgeIcon,
+} from "lucide-react";
 
 const StatCard = ({ icon: Icon, title, value, change, color }) => (
-  <div className="bg-white p-6 rounded-xl shadow-md">
+  <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
     <div className="flex items-center">
       <div className={`p-3 ${color} rounded-lg`}>
         <Icon className="h-6 w-6 text-indigo-600" />
@@ -14,8 +19,52 @@ const StatCard = ({ icon: Icon, title, value, change, color }) => (
       <div className="ml-4">
         <h3 className="text-sm font-medium text-gray-500">{title}</h3>
         <p className="text-2xl font-semibold text-gray-900">{value}</p>
-        <p className={`text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {change >= 0 ? '+' : ''}{change}% from last month
+        <p
+          className={`text-sm ${
+            change >= 0 ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {change >= 0 ? "+" : ""}
+          {change}% from last month
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const GenderDistributionCard = ({ male, female }) => (
+  <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+    <h3 className="text-sm font-medium text-gray-500">Gender Distribution</h3>
+    <div className="flex justify-between mt-2">
+      <div className="text-center">
+        <p className="text-2xl font-semibold text-blue-600">{male || "50%"}</p>
+        <p className="text-sm text-gray-500">Male</p>
+      </div>
+      <div className="text-center">
+        <p className="text-2xl font-semibold text-pink-600">
+          {female || "50%"}
+        </p>
+        <p className="text-sm text-gray-500">Female</p>
+      </div>
+    </div>
+  </div>
+);
+
+const AgeRatioCard = ({ ageRange, cases }) => (
+  <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+    <div className="flex items-center">
+      <div className="p-3 bg-teal-50 rounded-lg">
+        <AgeIcon className="h-6 w-6 text-teal-600" />
+      </div>
+      <div className="ml-4">
+        <h3 className="text-sm font-medium text-gray-500">
+          Dominant Age Group
+        </h3>
+        <p className="text-2xl font-semibold text-gray-900">
+          {ageRange || "N/A"}
+        </p>
+        <p className="text-sm text-gray-600">
+          {cases ? `${cases.toLocaleString()} cases` : "No data"}
         </p>
       </div>
     </div>
@@ -23,74 +72,270 @@ const StatCard = ({ icon: Icon, title, value, change, color }) => (
 );
 
 const Dashboard = () => {
-  // const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  // const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const { email, role } = useSelector((state) => state.auth);
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedDisease, setSelectedDisease] = useState("");
+  const [selectedDays, setSelectedDays] = useState(7);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Handle SocketIO alerts
-  // useEffect(() => {
-  //   socket.on('connect', () => console.log('Connected to SocketIO'));
-  //   socket.on('alert', (data: { message: string }) => {
-  //     console.log('Alert received:', data.message);
-  //     setAlertMessage(data.message);
-  //     setIsChatbotOpen(true);
-  //     setTimeout(() => {
-  //       setIsChatbotOpen(false);
-  //       setAlertMessage(null);
-  //     }, 10000); // 10 seconds visibility
-  //   });
-  //   return () => {
-  //     socket.off('alert');
-  //     socket.off('connect');
-  //   };
-  // }, []);
+  const districts = [
+    "Ahmedabad",
+    "Amreli",
+    "Anand",
+    "Aravalli",
+    "Banaskantha",
+    "Bharuch",
+    "Bhavnagar",
+    "Botad",
+    "Chhota Udaipur",
+    "Dahod",
+    "Dang",
+    "Devbhoomi Dwarka",
+    "Gandhinagar",
+    "Gir Somnath",
+    "Jamnagar",
+    "Junagadh",
+    "Kheda",
+    "Kutch",
+    "Mahisagar",
+    "Mehsana",
+    "Morbi",
+    "Narmada",
+    "Navsari",
+    "Panchmahal",
+    "Patan",
+    "Porbandar",
+    "Rajkot",
+    "Sabarkantha",
+    "Surat",
+    "Surendranagar",
+    "Tapi",
+    "Vadodara",
+    "Valsad",
+  ];
+
+  const diseases = [
+    "Malaria",
+    "Dengue",
+    "COVID-19",
+    "Cholera",
+    "Pneumonia",
+    "Typhoid",
+    "Swine Flu",
+    "Jaundice",
+  ];
+  const timeRanges = [
+    { label: "Last 7 days", value: 7 },
+    { label: "Last 3 months", value: 90 },
+    { label: "Last 6 months", value: 180 },
+    { label: "Last 1 year", value: 365 },
+  ];
+
+  const fetchDashboardData = async (initial = false) => {
+    setIsLoading(true);
+    try {
+      const payload = initial
+        ? { email, role }
+        : {
+            email,
+            role,
+            days: selectedDays,
+            district: selectedDistrict || "",
+            disease: selectedDisease || "",
+          };
+
+      const response = await fetch(
+        "https://diseases-backend-pi.vercel.app/api/v1/state-head/dashboard/disease-records",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard data");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+      setDashboardData(data);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (email && role) {
+      fetchDashboardData(true); // Initial fetch with email and role only
+    }
+  }, [email, role]);
+
+  useEffect(() => {
+    if (
+      email &&
+      role &&
+      (selectedDistrict || selectedDisease || selectedDays !== 7)
+    ) {
+      fetchDashboardData(false); // Fetch with filters
+    }
+  }, [selectedDistrict, selectedDisease, selectedDays]);
+
+  const stats = dashboardData?.stats || {};
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <div className="flex space-x-2">
-          <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Last 3 months</option>
-          </select>
+    <div className="relative min-h-screen p-6">
+      {/* Centered Loading Overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-start justify-center bg-gray-900 bg-opacity-50 z-50 backdrop-blur-sm]">
+          <div className="mt-80">
+            <button className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
+              <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              Loading...
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Dashboard Content */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center mb-5">
+          <h1 className="text-2xl font-bold text-gray-900">Gujarat Head Dashboard</h1>
+          <div className="flex space-x-9">
+            <div className="flex justify-between items-center ">
+              
+              <div className="flex space-x-4">
+                {/* District Select */}
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 focus:ring-opacity-50 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
+                >
+                  <option value="" className="bg-white text-gray-900">
+                    All Districts
+                  </option>
+                  {districts.map((district) => (
+                    <option
+                      key={district}
+                      value={district}
+                      className="bg-white text-gray-900"
+                    >
+                      {district}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Disease Select */}
+                <select
+                  value={selectedDisease}
+                  onChange={(e) => setSelectedDisease(e.target.value)}
+                  className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-teal-300 focus:ring-opacity-50 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
+                >
+                  <option value="" className="bg-white text-gray-900">
+                    All Diseases
+                  </option>
+                  {diseases.map((disease) => (
+                    <option
+                      key={disease}
+                      value={disease}
+                      className="bg-white text-gray-900"
+                    >
+                      {disease}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Days Select */}
+                <select
+                  value={selectedDays}
+                  onChange={(e) => setSelectedDays(Number(e.target.value))}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-opacity-50 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
+                >
+                  {timeRanges.map((range) => (
+                    <option
+                      key={range.value}
+                      value={range.value}
+                      className="bg-white text-gray-900"
+                    >
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          icon={Activity}
-          title="Total Cases"
-          value="45,678"
-          change={8}
-          color="bg-indigo-50"
-        />
-        <StatCard
-          icon={Users}
-          title="Active Cases"
-          value="1,234"
-          change={12}
-          color="bg-green-50"
-        />
-        <StatCard
-          icon={AlertTriangle}
-          title="Recovery Rate"
-          value="23%"
-          change={-5}
-          color="bg-yellow-50"
-        />
-        <StatCard
-          icon={Hospital}
-          title="Mortality Rate"
-          value="20%"
-          change={3}
-          color="bg-purple-50"
-        />
-      </div>
+      {dashboardData && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <StatCard
+            icon={Activity}
+            title="Total Cases"
+            value={stats.total_cases?.toLocaleString() || "0"}
+            change={stats.total_cases ? 0 : 8}
+            color="bg-indigo-50"
+          />
+          <StatCard
+            icon={Users}
+            title="Active Cases"
+            value={stats.active_cases?.toLocaleString() || "0"}
+            change={stats.active_cases ? 0 : 12}
+            color="bg-green-50"
+          />
+          <StatCard
+            icon={AlertTriangle}
+            title="Recovery Rate"
+            value={stats.recovery_rate ? `${stats.recovery_rate}%` : "0%"}
+            change={stats.recovery_rate ? 0 : -5}
+            color="bg-yellow-50"
+          />
+          <StatCard
+            icon={Hospital}
+            title="Mortality Rate"
+            value={stats.mortality_rate ? `${stats.mortality_rate}%` : "0%"}
+            change={stats.mortality_rate ? 0 : 3}
+            color="bg-purple-50"
+          />
+          <GenderDistributionCard
+            male={stats.total_male ? `${stats.total_male}%` : "50%"}
+            female={stats.total_female ? `${stats.total_female}%` : "50%"}
+          />
+          <AgeRatioCard
+            ageRange={stats.max_age_group?.age_range}
+            cases={stats.max_age_group?.cases}
+          />
+        </div>
+      )}
 
-      <div>
-        <AdminTrends />
-      </div>
+      {dashboardData && (
+        <div>
+          <AdminTrends data={dashboardData} days={selectedDays} />
+        </div>
+      )}
     </div>
   );
 };
