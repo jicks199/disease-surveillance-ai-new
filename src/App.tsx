@@ -58,7 +58,7 @@ import DiseaseDataEntry from "./components/hospital/DiseaseDataEntry";
 // import Dashboard from "./pages/citizen/Dashboard";
 
 function App() {
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);

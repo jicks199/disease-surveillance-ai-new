@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, Mail , ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ArrowLeft } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { login } from "../../redux/new/authslice"; // Import login action
 
@@ -46,12 +46,23 @@ function AdminLogin() {
         throw new Error("Invalid response from server");
       }
 
-      // ✅ Dispatch login action
-      dispatch(login({ email: userData.email, role: userData.role }));
+      // Dispatch login action with email, role, and district (if present)
+      dispatch(
+        login({
+          email: userData.email,
+          role: userData.role,
+          district: userData.district, // Will be undefined if not in API response
+        })
+      );
 
       // ✅ Navigate based on role
       if (userData.role === "district-head") {
-        navigate("/district-head/dashboard");
+        if (!userData.district) {
+          setError("No district assigned. Access denied.");
+          dispatch(logout()); // Logout if no district
+        } else {
+          navigate("/district-head/dashboard");
+        }
       } else {
         throw new Error("Invalid role received");
       }
@@ -65,22 +76,23 @@ function AdminLogin() {
     navigate("/");
   };
 
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-      <div className="mb-4">
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-40 backdrop-blur-lg border border-gray-300 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white shadow-md transition-all duration-300"
-            >
-              <ArrowLeft className="h-5 w-5 transition-transform transform group-hover:-translate-x-1" />
-              Back to Home
-            </button>
-          </div>
+        <div className="mb-4">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-40 backdrop-blur-lg border border-gray-300 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white shadow-md transition-all duration-300"
+          >
+            <ArrowLeft className="h-5 w-5 transition-transform transform group-hover:-translate-x-1" />
+            Back to Home
+          </button>
+        </div>
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Admin Login
+            </h1>
             <p className="text-gray-600">AI Disease Surveillance System</p>
           </div>
 
@@ -92,7 +104,10 @@ function AdminLogin() {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -109,7 +124,10 @@ function AdminLogin() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Password
               </label>
               <div className="relative">
@@ -127,7 +145,11 @@ function AdminLogin() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -141,12 +163,18 @@ function AdminLogin() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                <label
+                  htmlFor="remember-me"
+                  className="ml-2 block text-sm text-gray-700"
+                >
                   Remember me
                 </label>
               </div>
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <a
+                  href="#"
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   Forgot password?
                 </a>
               </div>
