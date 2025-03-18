@@ -10,7 +10,13 @@ import {
   Users as AgeIcon,
 } from "lucide-react";
 
-const StatCard = ({ icon: Icon, title, value, change, color }) => (
+const StatCard = ({
+  icon: Icon,
+  title,
+  value,
+  change,
+  color = "bg-gray-100",
+}) => (
   <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
     <div className="flex items-center">
       <div className={`p-3 ${color} rounded-lg`}>
@@ -18,14 +24,21 @@ const StatCard = ({ icon: Icon, title, value, change, color }) => (
       </div>
       <div className="ml-4">
         <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-        <p className="text-2xl font-semibold text-gray-900">{value}</p>
+        <p className="text-2xl font-semibold text-gray-900">
+          {value === "N/A" ? "0" : value}
+        </p>
         <p
-          className={`text-sm ${
-            change >= 0 ? "text-green-600" : "text-red-600"
+          className={`text-sm pt-3 mt-1 ${
+            isNaN(parseFloat(change)) || change === "N/A"
+              ? "text-gray-500"
+              : parseFloat(change) >= 0
+              ? "text-green-600"
+              : "text-red-600"
           }`}
         >
-          {change >= 0 ? "+" : ""}
-          {change}% from last month
+          {isNaN(parseFloat(change)) || change === "N/A"
+            ? "0 from last month"
+            : `${change}% from last month`}
         </p>
       </div>
     </div>
@@ -308,28 +321,28 @@ const Dashboard = () => {
               icon={Activity}
               title="Total Cases"
               value={stats.total_cases?.toLocaleString() || "0"}
-              change={stats.total_cases ? 0 : 8}
+              change={stats.total_month_cases || "0"}
               color="bg-indigo-50"
             />
             <StatCard
               icon={Users}
               title="Active Cases"
               value={stats.active_cases?.toLocaleString() || "0"}
-              change={stats.active_cases ? 0 : 12}
+              change={stats.total_month_active_cases || "0"}
               color="bg-green-50"
             />
             <StatCard
               icon={AlertTriangle}
               title="Recovery Rate"
               value={stats.recovery_rate ? `${stats.recovery_rate}%` : "0%"}
-              change={stats.recovery_rate ? 0 : -5}
+              change={stats.total_month_recovered_rate || "0"}
               color="bg-yellow-50"
             />
             <StatCard
               icon={Hospital}
               title="Mortality Rate"
               value={stats.mortality_rate ? `${stats.mortality_rate}%` : "0%"}
-              change={stats.mortality_rate ? 0 : 3}
+              change={stats.total_month_mortality_rate || "0"}
               color="bg-purple-50"
             />
             <GenderDistributionCard
