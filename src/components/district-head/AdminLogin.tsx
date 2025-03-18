@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail , ArrowLeft } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { login } from "../../redux/new/authslice"; // Import login action
 
@@ -61,10 +61,23 @@ function AdminLogin() {
       setIsLoading(false);
     }
   };
+  const handleBack = () => {
+    navigate("/");
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
+      <div className="mb-4">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-40 backdrop-blur-lg border border-gray-300 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white shadow-md transition-all duration-300"
+            >
+              <ArrowLeft className="h-5 w-5 transition-transform transform group-hover:-translate-x-1" />
+              Back to Home
+            </button>
+          </div>
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h1>

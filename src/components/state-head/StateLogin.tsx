@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom"; // Import navigation hook
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Lock, Mail, ArrowLeft } from "lucide-react"; // Added ArrowLeft icon
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "../../redux/new/authslice";
 
@@ -12,15 +12,10 @@ function StateLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const navigate = useNavigate(); // Initialize navigation
-  //  useEffect(() => {
-  //     localStorage.removeItem("role");
-  //     sessionStorage.removeItem("role");
-  //   }, []);
-  const dispatch = useDispatch(); // Use Redux dispatch
-  const { isAuth } = useSelector((state) => state.auth); // Access Redux auth state
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { isAuth } = useSelector((state) => state.auth);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuth) {
       navigate("/state-head/dashboard");
@@ -52,17 +47,14 @@ function StateLogin() {
       }
 
       const result = await response.json();
-
       const userData = result?.data;
 
       if (!userData?.role || !userData?.email) {
         throw new Error("Invalid response from server");
       }
 
-      // ✅ Dispatch login with email & role
       dispatch(login({ email: userData.email, role: userData.role }));
 
-      // ✅ Navigate based on role
       if (userData.role === "state-head") {
         navigate("/state-head/dashboard");
       } else {
@@ -75,9 +67,27 @@ function StateLogin() {
     }
   };
 
+  // Handler for back button
+  const handleBack = () => {
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Back Button added here */}
+        <div className="mb-4">
+          <div className="mb-4">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-40 backdrop-blur-lg border border-gray-300 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white shadow-md transition-all duration-300"
+            >
+              <ArrowLeft className="h-5 w-5 transition-transform transform group-hover:-translate-x-1" />
+              Back to Home
+            </button>
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">

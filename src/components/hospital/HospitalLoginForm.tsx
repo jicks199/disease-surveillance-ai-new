@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Stethoscope as Hospital, Loader2 } from "lucide-react";
+import { Stethoscope as Hospital, Loader2 , ArrowLeft} from "lucide-react";
 import Input from "../common/Input";
 import { useNavigate } from "react-router-dom";
 import { login, loginhospital } from "../../redux/slice/authslice";
@@ -162,9 +162,24 @@ const HospitalLoginForm: React.FC = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
+      <div className="mb-4">
+          <div className="mb-4">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-40 backdrop-blur-lg border border-gray-300 rounded-full text-blue-600 hover:bg-blue-600 hover:text-white shadow-md transition-all duration-300"
+            >
+              <ArrowLeft className="h-5 w-5 transition-transform transform group-hover:-translate-x-1" />
+              Back to Home
+            </button>
+          </div>
+        </div>
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-8">
           <div className="flex flex-col items-center justify-center mb-8">
             <Hospital className="h-12 w-12 text-blue-900" />
