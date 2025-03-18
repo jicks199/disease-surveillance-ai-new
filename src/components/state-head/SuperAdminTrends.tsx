@@ -28,6 +28,22 @@ const COLORS = [
   "#FF5722",
 ];
 
+// Month names
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 // Transform API data for charts
 const transformDataForCharts = (apiData, selectedDayRange) => {
   // Disease Distribution
@@ -36,6 +52,48 @@ const transformDataForCharts = (apiData, selectedDayRange) => {
       name: disease.name,
       cases: disease.cases,
     })) || [];
+
+  // Get current date (March 18, 2025) and current month (March = 2 in 0-based index)
+  const currentDate = new Date("2025-03-18");
+  const currentMonthIndex = currentDate.getMonth(); // 2 for March
+
+  // Calculate how many months to show based on day range
+  let monthsToShow;
+  switch (selectedDayRange) {
+    case 7:
+      monthsToShow = 1; // Current month only
+      break;
+    case 30:
+      monthsToShow = 2; // Current and previous month
+      break;
+    case 90:
+      monthsToShow = 4; // Roughly 3 months + current
+      break;
+    case 180:
+      monthsToShow = 7; // Roughly 6 months + current
+      break;
+    case 365:
+      monthsToShow = 12; // Full year
+      break;
+    default:
+      monthsToShow = 12;
+  }
+
+  // Filter monthly data based on selected range
+  const filteredMonthlyData = apiData.monthlyData.filter((month) => {
+    const monthIndex = month._id - 1; // Convert to 0-based index
+    // Calculate how many months back from current month
+    const monthsBack = (currentMonthIndex - monthIndex + 12) % 12;
+    return monthsBack < monthsToShow;
+  });
+
+  // Transform filtered monthly data
+  const monthlyDiseaseData = filteredMonthlyData.map((month) => ({
+    month: MONTH_NAMES[month._id - 1],
+    ...Object.fromEntries(
+      month.diseases.map((disease) => [disease.name, disease.cases])
+    ),
+  }));
 
   // District Distribution with detailed disease breakdown
   const districtChartData =
@@ -47,17 +105,17 @@ const transformDataForCharts = (apiData, selectedDayRange) => {
           name: d.name,
           cases: Math.round(
             d.cases * (district.total_cases / apiData.stats.total_cases)
-          ), // Proportional distribution
+          ),
         })) || [],
     })) || [];
 
-  // Top Affected Diseases by District (new feature)
+  // Top Affected Diseases by District
   const topDiseasesByDistrict =
     apiData.districtData?.map((district) => ({
       district: district._id,
       ...Object.fromEntries(
         apiData.monthlyData[0]?.diseases
-          ?.slice(0, 3) // Top 3 diseases for simplicity
+          ?.slice(0, 3)
           .map((disease) => [
             disease.name,
             Math.round(
@@ -69,6 +127,7 @@ const transformDataForCharts = (apiData, selectedDayRange) => {
 
   return {
     diseaseData,
+    monthlyDiseaseData,
     districtChartData,
     topDiseasesByDistrict,
   };
@@ -90,6 +149,23 @@ const CustomTooltip = ({ active, payload }) => {
             </p>
           ))}
         </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+// Custom Tooltip for Monthly Distribution
+const MonthlyTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 rounded shadow border">
+        <p className="font-semibold">Month {label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm" style={{ color: entry.fill }}>
+            {entry.name}: {entry.value} cases
+          </p>
+        ))}
       </div>
     );
   }
@@ -121,20 +197,25 @@ const DataNotAvailable = ({ message }) => (
 );
 
 const SuperAdminTrends = ({ data, days }) => {
-  const [selectedDayRange, setSelectedDayRange] = useState(7); // Default to 7 days
-  const chartData = transformDataForCharts(data, selectedDayRange);
+  const [selectedDayRange, setSelectedDayRange] = useState(7);
+  const chartData = transformDataForCharts(data, days); // Use days prop directly
   const finaldays = days;
 
-  // Dynamic bar width calculation
-  const barWidth = Math.min(50, 500 / (chartData.diseaseData.length || 1)); // Avoid division by zero
+  const barWidth = Math.min(50, 500 / (chartData.diseaseData.length || 1));
 
-  // Day range options
   const dayRanges = [
     { label: "Last 7 Days", value: 7 },
     { label: "Last 30 Days", value: 30 },
     { label: "Last 90 Days", value: 90 },
     { label: "Last 180 Days", value: 180 },
     { label: "Last 365 Days", value: 365 },
+  ];
+
+  // Get unique disease names from monthly data
+  const diseaseNames = [
+    ...new Set(
+      data.monthlyData.flatMap((month) => month.diseases.map((d) => d.name))
+    ),
   ];
 
   return (
@@ -197,38 +278,51 @@ const SuperAdminTrends = ({ data, days }) => {
           />
         </div>
 
-        {/* Top Affected Diseases by District */}
+        {/* Monthly Disease Distribution */}
         <section className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Top Affected Diseases by District (
+            Monthly Disease Distribution (
             {dayRanges.find((r) => r.value === finaldays)?.label || "Unknown"})
           </h2>
-          {chartData.topDiseasesByDistrict.length > 0 &&
-          data.monthlyData[0]?.diseases?.length > 0 ? (
+          {chartData.monthlyDiseaseData.length > 0 ? (
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData.topDiseasesByDistrict}>
+                <BarChart
+                  data={chartData.monthlyDiseaseData}
+                  margin={{ top: 20, bottom: 10 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="district" />
-                  <YAxis />
-                  <Tooltip content={<TopDiseasesTooltip />} />
-                  <Legend />
-                  {data.monthlyData[0]?.diseases
-                    .slice(0, 3)
-                    .map((disease, index) => (
-                      <Bar
-                        key={disease.name}
-                        dataKey={disease.name}
-                        fill={COLORS[index % COLORS.length]}
-                        name={disease.name}
-                        barSize={50}
-                      />
-                    ))}
+                  <XAxis
+                    dataKey="month"
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                    height={80}
+                    dy={10}
+                  />
+                  <YAxis domain={[0, "dataMax + 50"]} />
+                  <Tooltip content={<MonthlyTooltip />} />
+                  <Legend
+                    wrapperStyle={{
+                      position: "relative",
+                      bottom: 25,
+                      textAlign: "center",
+                    }}
+                  />
+                  {diseaseNames.map((disease, index) => (
+                    <Bar
+                      key={disease}
+                      dataKey={disease}
+                      fill={COLORS[index % COLORS.length]}
+                      name={disease}
+                      barSize={40}
+                    />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <DataNotAvailable message="District or disease data not available" />
+            <DataNotAvailable message="Monthly data not available" />
           )}
         </section>
 
