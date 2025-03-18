@@ -5,6 +5,8 @@ import { z } from "zod";
 import { Stethoscope as Hospital, Loader2 } from "lucide-react";
 import Input from "../common/Input";
 import { useNavigate } from "react-router-dom";
+import { login, loginhospital } from "../../redux/slice/authslice";
+import { useDispatch } from "react-redux";
 
 interface LoginFormData {
   credential: string;
@@ -32,6 +34,74 @@ const HospitalLoginForm: React.FC = () => {
     resolver: zodResolver(schema),
   });
 
+  // const onSubmit = async (data: LoginFormData) => {
+  //   setIsSubmitting(true);
+  //   setApiMessage(null);
+
+  //   try {
+  //     const response = await fetch(
+  //       `${import.meta.env.VITE_API_VERCEL}/api/v1/hospital/login`,
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify(data),
+  //       }
+  //     );
+
+  //     const result = await response.json();
+  //     console.log("API Response:", result); // Log full response for debugging
+
+  //     // Check if login was successful based on status code and optional success flag
+  //     if (response.ok) {
+  //       setApiMessage({
+  //         type: "success",
+  //         message: "Welcome back! Login successful.",
+  //       });
+
+  //       // Extract token and hospital_id with fallback
+  //       const token = result.data.token || result.data?.token;
+  //       const hospitalId = result.data._id || result.data?.hospital_id;
+
+  //       // Store token and hospital_id if present
+  //       if (token) {
+  //         localStorage.setItem("authToken", token);
+  //         console.log("Stored authToken:", token);
+  //       } else {
+  //         console.warn("No token returned from API");
+  //       }
+
+  //       if (hospitalId) {
+  //         localStorage.setItem("hospital_id", hospitalId);
+  //         console.log("Stored hospital_id:", hospitalId);
+  //       } else {
+  //         console.warn("No hospital_id returned from API");
+  //       }
+
+  //       // Navigate after a short delay
+  //       setTimeout(() => {
+  //         navigate("/hospital/dashboard");
+  //       }, 1000);
+  //     } else {
+  //       // Handle API error response
+  //       setApiMessage({
+  //         type: "error",
+  //         message: result.message || "Invalid credentials",
+  //       });
+  //       console.log("Login failed:", result.message);
+  //     }
+  //   } catch (error) {
+  //     // Handle network or unexpected errors
+  //     console.error("Login error:", error);
+  //     setApiMessage({
+  //       type: "error",
+  //       message: "An error occurred. Please try again.",
+  //     });
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+  const dispatch = useDispatch();
+
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     setApiMessage(null);
@@ -47,40 +117,34 @@ const HospitalLoginForm: React.FC = () => {
       );
 
       const result = await response.json();
-      console.log("API Response:", result); // Log full response for debugging
+      // console.log("API Response:", result);
 
-      // Check if login was successful based on status code and optional success flag
       if (response.ok) {
         setApiMessage({
           type: "success",
           message: "Welcome back! Login successful.",
         });
 
-        // Extract token and hospital_id with fallback
-        const token = result.data.token || result.data?.token;
-        const hospitalId = result.data._id || result.data?.hospital_id;
-
-        // Store token and hospital_id if present
-        if (token) {
-          localStorage.setItem("authToken", token);
-          console.log("Stored authToken:", token);
-        } else {
-          console.warn("No token returned from API");
-        }
+        // Extract hospital ID
+        const hospitalId = result.data?._id;
+        const email = result.data?.email;
 
         if (hospitalId) {
-          localStorage.setItem("hospital_id", hospitalId);
-          console.log("Stored hospital_id:", hospitalId);
+          // Store hospital ID in Redux
+          dispatch(
+            login({
+              email: hospitalId,
+              role: "hospital",
+              hospitalId: hospitalId,
+            })
+          );
+          console.log("Stored hospital_id in Redux:", hospitalId);
+
+          navigate("/hospital/dashboard");
         } else {
           console.warn("No hospital_id returned from API");
         }
-
-        // Navigate after a short delay
-        setTimeout(() => {
-          navigate("/hospital/dashboard");
-        }, 1000);
       } else {
-        // Handle API error response
         setApiMessage({
           type: "error",
           message: result.message || "Invalid credentials",
@@ -88,7 +152,6 @@ const HospitalLoginForm: React.FC = () => {
         console.log("Login failed:", result.message);
       }
     } catch (error) {
-      // Handle network or unexpected errors
       console.error("Login error:", error);
       setApiMessage({
         type: "error",
