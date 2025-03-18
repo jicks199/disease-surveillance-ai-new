@@ -32,38 +32,40 @@ const COLORS = [
 const transformDataForCharts = (apiData, selectedDayRange) => {
   // Disease Distribution
   const diseaseData =
-    apiData.monthlyData[0]?.diseases.map((disease) => ({
+    apiData.monthlyData[0]?.diseases?.map((disease) => ({
       name: disease.name,
       cases: disease.cases,
     })) || [];
 
   // District Distribution with detailed disease breakdown
-  const districtChartData = apiData.districtData.map((district) => ({
-    name: district._id,
-    value: district.total_cases,
-    diseases:
-      apiData.monthlyData[0]?.diseases.map((d) => ({
-        name: d.name,
-        cases: Math.round(
-          d.cases * (district.total_cases / apiData.stats.total_cases)
-        ), // Proportional distribution
-      })) || [],
-  }));
+  const districtChartData =
+    apiData.districtData?.map((district) => ({
+      name: district._id,
+      value: district.total_cases,
+      diseases:
+        apiData.monthlyData[0]?.diseases?.map((d) => ({
+          name: d.name,
+          cases: Math.round(
+            d.cases * (district.total_cases / apiData.stats.total_cases)
+          ), // Proportional distribution
+        })) || [],
+    })) || [];
 
   // Top Affected Diseases by District (new feature)
-  const topDiseasesByDistrict = apiData.districtData.map((district) => ({
-    district: district._id,
-    ...Object.fromEntries(
-      apiData.monthlyData[0]?.diseases
-        .slice(0, 3) // Top 3 diseases for simplicity
-        .map((disease) => [
-          disease.name,
-          Math.round(
-            disease.cases * (district.total_cases / apiData.stats.total_cases)
-          ),
-        ]) || []
-    ),
-  }));
+  const topDiseasesByDistrict =
+    apiData.districtData?.map((district) => ({
+      district: district._id,
+      ...Object.fromEntries(
+        apiData.monthlyData[0]?.diseases
+          ?.slice(0, 3) // Top 3 diseases for simplicity
+          .map((disease) => [
+            disease.name,
+            Math.round(
+              disease.cases * (district.total_cases / apiData.stats.total_cases)
+            ),
+          ]) || []
+      ),
+    })) || [];
 
   return {
     diseaseData,
@@ -111,10 +113,20 @@ const TopDiseasesTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+// Component for displaying "Data Not Available" message
+const DataNotAvailable = ({ message }) => (
+  <div className="h-80 flex items-center justify-center">
+    <p className="text-gray-500 text-lg">{message}</p>
+  </div>
+);
+
 const SuperAdminTrends = ({ data, days }) => {
   const [selectedDayRange, setSelectedDayRange] = useState(7); // Default to 7 days
   const chartData = transformDataForCharts(data, selectedDayRange);
   const finaldays = days;
+
+  // Dynamic bar width calculation
+  const barWidth = Math.min(50, 500 / (chartData.diseaseData.length || 1)); // Avoid division by zero
 
   // Day range options
   const dayRanges = [
@@ -126,51 +138,54 @@ const SuperAdminTrends = ({ data, days }) => {
   ];
 
   return (
-    <div className="space-y-8 ">
+    <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-3">
         {/* Disease Distribution */}
         <section className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Disease Distribution (
-            {dayRanges.find((r) => r.value === finaldays)?.label})
+            {dayRanges.find((r) => r.value === finaldays)?.label || "Unknown"})
           </h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData.diseaseData}
-                margin={{ top: 20, bottom: 10 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  interval={0}
-                  height={80}
-                  dy={10}
-                />
-                <YAxis domain={[0, "dataMax + 50"]} />
-                <Tooltip />
-                <Legend
-                  wrapperStyle={{
-                    position: "relative",
-                    bottom: 25,
-                    textAlign: "center",
-                    marginBottom: "0px",
-                  }}
-                />
-                {/* Single Bar Component with Dynamic Colors */}
-                <Bar dataKey="cases">
-                  {chartData.diseaseData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {chartData.diseaseData.length > 0 ? (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData.diseaseData}
+                  margin={{ top: 20, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                    height={80}
+                    dy={10}
+                  />
+                  <YAxis domain={[0, "dataMax + 50"]} />
+                  <Tooltip />
+                  <Legend
+                    wrapperStyle={{
+                      position: "relative",
+                      bottom: 25,
+                      textAlign: "center",
+                      marginBottom: "0px",
+                    }}
+                  />
+                  <Bar dataKey="cases" barSize={barWidth}>
+                    {chartData.diseaseData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <DataNotAvailable message="Disease data not available" />
+          )}
         </section>
 
         {/* Outbreak Alerts */}
@@ -182,65 +197,75 @@ const SuperAdminTrends = ({ data, days }) => {
           />
         </div>
 
-        {/* Top Affected Diseases by District (New Feature) */}
+        {/* Top Affected Diseases by District */}
         <section className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Top Affected Diseases by District (
-            {dayRanges.find((r) => r.value === finaldays)?.label})
+            {dayRanges.find((r) => r.value === finaldays)?.label || "Unknown"})
           </h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.topDiseasesByDistrict}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="district" />
-                <YAxis />
-                <Tooltip content={<TopDiseasesTooltip />} />
-                <Legend />
-                {data.monthlyData[0]?.diseases
-                  .slice(0, 3)
-                  .map((disease, index) => (
-                    <Bar
-                      key={disease.name}
-                      dataKey={disease.name}
-                      fill={COLORS[index % COLORS.length]}
-                      name={disease.name}
-                    />
-                  ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {chartData.topDiseasesByDistrict.length > 0 &&
+          data.monthlyData[0]?.diseases?.length > 0 ? (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.topDiseasesByDistrict}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="district" />
+                  <YAxis />
+                  <Tooltip content={<TopDiseasesTooltip />} />
+                  <Legend />
+                  {data.monthlyData[0]?.diseases
+                    .slice(0, 3)
+                    .map((disease, index) => (
+                      <Bar
+                        key={disease.name}
+                        dataKey={disease.name}
+                        fill={COLORS[index % COLORS.length]}
+                        name={disease.name}
+                        barSize={50}
+                      />
+                    ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <DataNotAvailable message="District or disease data not available" />
+          )}
         </section>
 
         {/* District-wise Distribution */}
         <section className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             District-wise Distribution (
-            {dayRanges.find((r) => r.value === finaldays)?.label})
+            {dayRanges.find((r) => r.value === finaldays)?.label || "Unknown"})
           </h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData.districtChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {chartData.districtChartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {chartData.districtChartData.length > 0 ? (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData.districtChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {chartData.districtChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <DataNotAvailable message="District data not available" />
+          )}
         </section>
       </div>
     </div>

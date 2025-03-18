@@ -16,7 +16,9 @@ const SuperAdminMap = ({ days = 7 }) => { // Added days prop to sync with Dashbo
     try {
       const payload = { email, role, days };
       const response = await fetch(
-        "https://diseases-backend-pi.vercel.app/api/v1/state-head/dashboard/disease-records",
+        `${
+          import.meta.env.VITE_API_VERCEL
+        }/api/v1/state-head/dashboard/disease-records`,
         {
           method: "POST",
           headers: {

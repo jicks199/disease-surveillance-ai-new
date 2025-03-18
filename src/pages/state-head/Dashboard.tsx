@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import AdminTrends from "../../components/state-head/SuperAdminTrends";
+import AdminTrends from "../../components/state-head/SuperAdminTrends"; // Assuming this is SuperAdminTrends
 import SuperAlerts from "../../components/state-head/SuperOutbreakAlerts";
 import {
   Activity,
@@ -68,6 +68,13 @@ const AgeRatioCard = ({ ageRange, cases }) => (
         </p>
       </div>
     </div>
+  </div>
+);
+
+// Component for displaying "Data Not Available" message
+const DataNotAvailable = ({ message }) => (
+  <div className="flex items-center justify-center h-80">
+    <p className="text-gray-500 text-lg">{message}</p>
   </div>
 );
 
@@ -146,7 +153,9 @@ const Dashboard = () => {
           };
 
       const response = await fetch(
-        "https://diseases-backend-pi.vercel.app/api/v1/state-head/dashboard/disease-records",
+        `${
+          import.meta.env.VITE_API_VERCEL
+        }/api/v1/state-head/dashboard/disease-records`,
         {
           method: "POST",
           headers: {
@@ -165,6 +174,7 @@ const Dashboard = () => {
       setDashboardData(data);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+      setDashboardData(null); // Reset data on error
     } finally {
       setIsLoading(false);
     }
@@ -192,7 +202,7 @@ const Dashboard = () => {
     <div className="relative min-h-screen p-6">
       {/* Centered Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-start justify-center bg-gray-900 bg-opacity-50 z-50 backdrop-blur-sm]">
+        <div className="absolute inset-0 flex items-start justify-center bg-gray-900 bg-opacity-50 z-50 backdrop-blur-sm">
           <div className="mt-80">
             <button className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
               <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24">
@@ -220,10 +230,11 @@ const Dashboard = () => {
       {/* Main Dashboard Content */}
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-5">
-          <h1 className="text-2xl font-bold text-gray-900">Gujarat Head Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Gujarat Head Dashboard
+          </h1>
           <div className="flex space-x-9">
-            <div className="flex justify-between items-center ">
-              
+            <div className="flex justify-between items-center">
               <div className="flex space-x-4">
                 {/* District Select */}
                 <select
@@ -290,51 +301,81 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {dashboardData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <StatCard
-            icon={Activity}
-            title="Total Cases"
-            value={stats.total_cases?.toLocaleString() || "0"}
-            change={stats.total_cases ? 0 : 8}
-            color="bg-indigo-50"
-          />
-          <StatCard
-            icon={Users}
-            title="Active Cases"
-            value={stats.active_cases?.toLocaleString() || "0"}
-            change={stats.active_cases ? 0 : 12}
-            color="bg-green-50"
-          />
-          <StatCard
-            icon={AlertTriangle}
-            title="Recovery Rate"
-            value={stats.recovery_rate ? `${stats.recovery_rate}%` : "0%"}
-            change={stats.recovery_rate ? 0 : -5}
-            color="bg-yellow-50"
-          />
-          <StatCard
-            icon={Hospital}
-            title="Mortality Rate"
-            value={stats.mortality_rate ? `${stats.mortality_rate}%` : "0%"}
-            change={stats.mortality_rate ? 0 : 3}
-            color="bg-purple-50"
-          />
-          <GenderDistributionCard
-            male={stats.total_male ? `${stats.total_male}%` : "50%"}
-            female={stats.total_female ? `${stats.total_female}%` : "50%"}
-          />
-          <AgeRatioCard
-            ageRange={stats.max_age_group?.age_range}
-            cases={stats.max_age_group?.cases}
-          />
-        </div>
-      )}
+      {dashboardData ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <StatCard
+              icon={Activity}
+              title="Total Cases"
+              value={stats.total_cases?.toLocaleString() || "0"}
+              change={stats.total_cases ? 0 : 8}
+              color="bg-indigo-50"
+            />
+            <StatCard
+              icon={Users}
+              title="Active Cases"
+              value={stats.active_cases?.toLocaleString() || "0"}
+              change={stats.active_cases ? 0 : 12}
+              color="bg-green-50"
+            />
+            <StatCard
+              icon={AlertTriangle}
+              title="Recovery Rate"
+              value={stats.recovery_rate ? `${stats.recovery_rate}%` : "0%"}
+              change={stats.recovery_rate ? 0 : -5}
+              color="bg-yellow-50"
+            />
+            <StatCard
+              icon={Hospital}
+              title="Mortality Rate"
+              value={stats.mortality_rate ? `${stats.mortality_rate}%` : "0%"}
+              change={stats.mortality_rate ? 0 : 3}
+              color="bg-purple-50"
+            />
+            <GenderDistributionCard
+              male={stats.total_male ? `${stats.total_male}%` : "50%"}
+              female={stats.total_female ? `${stats.total_female}%` : "50%"}
+            />
+            <AgeRatioCard
+              ageRange={stats.max_age_group?.age_range}
+              cases={stats.max_age_group?.cases}
+            />
+          </div>
 
-      {dashboardData && (
-        <div>
-          <AdminTrends data={dashboardData} days={selectedDays} />
-        </div>
+          {/* Check if district or disease data is available */}
+          {dashboardData.districtData?.length > 0 ||
+          dashboardData.monthlyData?.[0]?.diseases?.length > 0 ? (
+            <div>
+              <AdminTrends data={dashboardData} days={selectedDays} />
+            </div>
+          ) : (
+            <DataNotAvailable
+              message={
+                selectedDistrict && selectedDisease
+                  ? "Data not available for selected district and disease"
+                  : selectedDistrict
+                  ? "Data not available for selected district"
+                  : selectedDisease
+                  ? "Data not available for selected disease"
+                  : "No data available"
+              }
+            />
+          )}
+        </>
+      ) : (
+        !isLoading && (
+          <DataNotAvailable
+            message={
+              selectedDistrict && selectedDisease
+                ? "Data not available for selected district and disease"
+                : selectedDistrict
+                ? "Data not available for selected district"
+                : selectedDisease
+                ? "Data not available for selected disease"
+                : "No data available"
+            }
+          />
+        )
       )}
     </div>
   );

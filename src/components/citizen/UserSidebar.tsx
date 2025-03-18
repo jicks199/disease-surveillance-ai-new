@@ -13,12 +13,12 @@ const UserSidebar = ({isOpen}) => {
   const location = useLocation();
 
   const menuItems = [
-    { path: '/citizen/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/citizen/alerts', icon: Bell, label: 'Alerts' },
-    { path: '/citizen/prediction', icon: Brain, label: 'AI Prediction' },
-    { path: '/citizen/news', icon: Newspaper, label: 'News' },
-    { path: '/citizen/about', icon: Info, label: 'About' },
-    { path: '/citizen/contact', icon: MessageSquare, label: 'Contact' },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/alerts', icon: Bell, label: 'Alerts' },
+    { path: '/prediction', icon: Brain, label: 'AI Prediction' },
+    { path: '/news', icon: Newspaper, label: 'News' },
+    { path: '/about', icon: Info, label: 'About' },
+    { path: '/contact', icon: MessageSquare, label: 'Contact' },
   ];
 
   return (

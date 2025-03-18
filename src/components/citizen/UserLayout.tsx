@@ -1,9 +1,9 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import UserNavbar from './UserNavbar';
+// import UserNavbar from './UserNavbar';
 import UserSidebar from './UserSidebar';
-import UserFooter from './UserFooter';
-import AdminSidebar from '../district-head/AdminSidebar';
+// import UserFooter from './UserFooter';
+// import AdminSidebar from '../district-head/AdminSidebar';
 import { Menu } from 'lucide-react';
 
 const UserLayout = ({ isSidebarOpen, toggleSidebar }) => {
