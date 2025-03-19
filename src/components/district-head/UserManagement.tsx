@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Stethoscope, Bed, HeartPulse, Wind, Droplet } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { login } from '../../redux/new/authSlice';
+import { login } from '../../redux/new/authslice';
 import axios from 'axios';
 
 const UserManagement = () => {
