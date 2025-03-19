@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Stethoscope } from 'lucide-react';
 
+
 // Static hospital data
 const hospitalData = [
   { id: '1', name: 'Apollo Hospital', email: 'contact@apollo.com', mobile_no: '9876543210', location: 'Gandhinagar' },

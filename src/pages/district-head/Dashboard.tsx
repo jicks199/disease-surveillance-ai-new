@@ -101,7 +101,9 @@ const Dashboard = () => {
   const [selectedDays, setSelectedDays] = useState(7);
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hospital, setHospital] = useState(""); // Corrected variable name
+  // const [hospital, setHospital] = useState(""); // Corrected variable name
+  const [hospitals, setHospitals] = useState([]); // State for hospital data
+  const [selectedHospital, setSelectedHospital] = useState(""); // State for selected hospital
 
   const diseases = [
     "Malaria",
@@ -113,12 +115,45 @@ const Dashboard = () => {
     "Swine Flu",
     "Jaundice",
   ];
+  
   const timeRanges = [
     { label: "Last 7 days", value: 7 },
     { label: "Last 3 months", value: 90 },
     { label: "Last 6 months", value: 180 },
     { label: "Last 1 year", value: 365 },
   ];
+  
+  const fetchHospitals = async () => {
+    try {
+      const payload = {
+        email,
+        role,
+        district: selectedDistrict || district,
+      };
+
+      const response = await fetch(
+        "https://diseases-backend-pi.vercel.app/api/v1/hospital/getHospitals",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch hospitals");
+      }
+
+      const data = await response.json();
+      setHospitals(data.data || []); // Store hospital data in state
+    } catch (error) {
+      console.error("Error fetching hospitals:", error);
+      setHospitals([]);
+    }
+  };
+
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -126,9 +161,10 @@ const Dashboard = () => {
       const payload = {
         email,
         role,
-        district: selectedDistrict || district, // Fallback to Redux district
+        district: selectedDistrict || district,
+        hospital: selectedHospital || "", // Include selected hospital
+        disease: selectedDisease || "", // Allow empty for all diseases
         days: selectedDays,
-        disease: selectedDisease, // Allow empty string for "All Diseases"
       };
 
       const response = await fetch(
@@ -159,12 +195,19 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch data on mount and when filters change
+  // Fetch hospitals on mount and when district changes
+  useEffect(() => {
+    if (email && role && district) {
+      fetchHospitals();
+    }
+  }, [email, role, district]);
+
+  // Fetch dashboard data when any filter changes
   useEffect(() => {
     if (email && role && district) {
       fetchDashboardData();
     }
-  }, [email, role, district, selectedDisease, selectedDays]);
+  }, [email, role, district, selectedHospital, selectedDisease, selectedDays]);
 
   const stats = dashboardData?.stats || {};
 
@@ -204,6 +247,29 @@ const Dashboard = () => {
           <div className="flex space-x-9">
             <div className="flex justify-between items-center">
               <div className="flex space-x-4">
+
+                {/* Hospital Select */}
+                <select
+                  value={selectedHospital}
+                  onChange={(e) => setSelectedHospital(e.target.value)}
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300 focus:ring-opacity-50 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
+                >
+                  <option value="" className="bg-white text-gray-900">
+                    All Hospitals
+                  </option>
+                  {hospitals.map((hospital) => (
+                    <option
+                    key={hospital._id}
+                    // value={hospital._id}
+                    value={hospital.name} // Use hospital name as value
+                      className="bg-white text-gray-900"
+                    >
+                      {hospital.name}
+                    </option>
+                  ))}
+                </select>
+
                 {/* Disease Select */}
                 <select
                   value={selectedDisease}
@@ -298,10 +364,10 @@ const Dashboard = () => {
           ) : (
             <DataNotAvailable
               message={
-                hospital && selectedDisease
-                  ? "Data not available for selected district and disease"
-                  : hospital
-                  ? "Data not available for selected district"
+                selectedHospital && selectedDisease
+                  ? "Data not available for selected hospital and disease"
+                  : selectedHospital
+                  ? "Data not available for selected hospital"
                   : selectedDisease
                   ? "Data not available for selected disease"
                   : "No data available"
@@ -313,10 +379,10 @@ const Dashboard = () => {
         !isLoading && (
           <DataNotAvailable
             message={
-              hospital && selectedDisease
-                ? "Data not available for selected district and disease"
-                : hospital
-                ? "Data not available for selected district"
+              selectedHospital && selectedDisease
+                ? "Data not available for selected hospital and disease"
+                : selectedHospital
+                ? "Data not available for selected hospital"
                 : selectedDisease
                 ? "Data not available for selected disease"
                 : "No data available"

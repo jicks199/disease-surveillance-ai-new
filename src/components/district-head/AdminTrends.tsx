@@ -268,7 +268,7 @@ const AdminTrends = ({ data, days }) => {
 
             </h3>
             {data.availableResources ? (
-              <div className="grid gap-6">
+              <div className="grid gap-6 ">
                 <div className="border-b pb-4">
                   <div className="flex items-center mb-2">
                     <Bed className="w-5 h-5 text-blue-500 mr-2" />
