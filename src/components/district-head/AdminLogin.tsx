@@ -73,7 +73,7 @@ function AdminLogin() {
     }
   };
   const handleBack = () => {
-    navigate("/");
+    navigate("/a-dmin");
   };
 
   return (

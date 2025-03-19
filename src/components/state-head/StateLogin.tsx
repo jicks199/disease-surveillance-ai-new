@@ -69,7 +69,7 @@ function StateLogin() {
 
   // Handler for back button
   const handleBack = () => {
-    navigate("/");
+    navigate("/a-dmin");
   };
 
   return (
