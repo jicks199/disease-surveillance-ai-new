@@ -215,33 +215,23 @@ const Dashboard = () => {
     <div className="relative min-h-screen p-6">
       {/* Centered Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-start justify-center bg-gray-900 bg-opacity-50 z-50 backdrop-blur-sm">
-          <div className="mt-80">
-            <button className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
-              <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Loading...
-            </button>
+        <div className="absolute top-0 inset-0 flex justify-center mt-20 items-start bg-white/60 backdrop-blur-xl shadow-lg z-50">
+          
+          <div className="relative flex justify-center items-center">
+            {/* Glowing Loader with Ripple Effect */}
+            <div className="absolute animate-ping w-16 h-16 rounded-full bg-indigo-300 opacity-75"></div>
+            <div className="absolute animate-pulse w-12 h-12 rounded-full bg-indigo-400"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-opacity-80"></div>
           </div>
         </div>
       )}
 
       {/* Main Dashboard Content */}
-      <div className="space-y-6">
+      <div
+        className={`space-y-6 transition-all duration-300 ${
+          isLoading ? "blur-md pointer-events-none select-none" : ""
+        }`}
+      >
         <div className="flex justify-between items-center mb-5">
           <h1 className="text-2xl font-bold text-gray-900">
             Gujarat Head Dashboard

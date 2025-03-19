@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import {
-  FileText,
-  Download,
-  Share2,
-  Printer,
-} from "lucide-react";
+import { FileText, Download, Share2, Printer } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -169,7 +164,10 @@ const Reports = () => {
         .map((d) => d.recovered),
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -188,7 +186,11 @@ const Reports = () => {
       return;
     }
 
-    const shareText = `Health Report (${dayRanges.find((r) => r.value === selectedDayRange)?.label})\nTotal Cases: ${reportData.stats.total_cases.toLocaleString()}\nRecovery Rate: ${reportData.stats.recovery_rate}%\nHigh-Risk Areas: ${reportData.outbreakAlerts?.length || 0} Districts`;
+    const shareText = `Health Report (${
+      dayRanges.find((r) => r.value === selectedDayRange)?.label
+    })\nTotal Cases: ${reportData.stats.total_cases.toLocaleString()}\nRecovery Rate: ${
+      reportData.stats.recovery_rate
+    }%\nHigh-Risk Areas: ${reportData.outbreakAlerts?.length || 0} Districts`;
 
     if (navigator.share) {
       try {
@@ -219,27 +221,12 @@ const Reports = () => {
     <div className="space-y-6 p-6 relative">
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-start justify-center bg-gray-900 bg-opacity-50 z-50 backdrop-blur-sm">
-          <div className="mt-80">
-            <button className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
-              <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Loading...
-            </button>
+        <div className="absolute top-0 inset-0 flex justify-center mt-20 items-start bg-white/60 backdrop-blur-xl shadow-lg z-50">
+          <div className="relative flex justify-center items-center">
+            {/* Glowing Loader with Ripple Effect */}
+            <div className="absolute animate-ping w-16 h-16 rounded-full bg-indigo-300 opacity-75"></div>
+            <div className="absolute animate-pulse w-12 h-12 rounded-full bg-indigo-400"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-opacity-80"></div>
           </div>
         </div>
       )}
@@ -251,7 +238,13 @@ const Reports = () => {
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-xl shadow-md">
+      {/* Main Dashboard Content */}
+      <div
+        className={`space-y-6 transition-all duration-300 ${
+          isLoading ? "blur-md pointer-events-none select-none" : ""
+        }`}
+      >
+        {/* <div className="bg-white p-6 rounded-xl shadow-md"> */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
             AI-Generated Health Reports for {district}
@@ -264,7 +257,11 @@ const Reports = () => {
               disabled={isLoading}
             >
               {dayRanges.map((range) => (
-                <option key={range.value} value={range.value} className="bg-white text-gray-900">
+                <option
+                  key={range.value}
+                  value={range.value}
+                  className="bg-white text-gray-900"
+                >
                   {range.label}
                 </option>
               ))}
@@ -318,8 +315,16 @@ const Reports = () => {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="active" fill="#EF4444" name="Active Cases" />
-                      <Bar dataKey="recovered" fill="#10B981" name="Recovered" />
+                      <Bar
+                        dataKey="active"
+                        fill="#EF4444"
+                        name="Active Cases"
+                      />
+                      <Bar
+                        dataKey="recovered"
+                        fill="#10B981"
+                        name="Recovered"
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -343,7 +348,10 @@ const Reports = () => {
                         dataKey="value"
                       >
                         {districtData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip content={<CustomTooltip />} />
@@ -360,17 +368,22 @@ const Reports = () => {
                   <FileText className="h-6 w-6 text-indigo-600 mr-2" />
                   <h3 className="text-lg font-medium">
                     Health Summary (
-                    {dayRanges.find((r) => r.value === selectedDayRange)?.label})
+                    {dayRanges.find((r) => r.value === selectedDayRange)?.label}
+                    )
                   </h3>
                 </div>
                 <p className="text-gray-600 mb-4">
-                  AI-generated analysis of health trends and patterns for {district}.
+                  AI-generated analysis of health trends and patterns for{" "}
+                  {district}.
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total Cases Analyzed</span>
+                    <span className="text-sm text-gray-600">
+                      Total Cases Analyzed
+                    </span>
                     <span className="font-medium">
-                      {reportData.stats.total_cases?.toLocaleString() || "1,200"}
+                      {reportData.stats.total_cases?.toLocaleString() ||
+                        "1,200"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -380,7 +393,9 @@ const Reports = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">High-Risk Areas</span>
+                    <span className="text-sm text-gray-600">
+                      High-Risk Areas
+                    </span>
                     <span className="font-medium text-red-600">
                       {reportData.outbreakAlerts?.length || 0} Districts
                     </span>
@@ -394,23 +409,32 @@ const Reports = () => {
                   <h3 className="text-lg font-medium">Predictive Analysis</h3>
                 </div>
                 <p className="text-gray-600 mb-4">
-                  AI predictions for potential disease outbreaks and recommended preventive measures.
+                  AI predictions for potential disease outbreaks and recommended
+                  preventive measures.
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Risk Level</span>
                     <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                      {reportData.outbreakAlerts?.length > 2 ? "High" : "Moderate"}
+                      {reportData.outbreakAlerts?.length > 2
+                        ? "High"
+                        : "Moderate"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Predicted Trend</span>
+                    <span className="text-sm text-gray-600">
+                      Predicted Trend
+                    </span>
                     <span className="font-medium text-blue-600">
-                      {parseFloat(reportData.stats.recovery_rate) > 75 ? "Improving" : "Stable"}
+                      {parseFloat(reportData.stats.recovery_rate) > 75
+                        ? "Improving"
+                        : "Stable"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Confidence Score</span>
+                    <span className="text-sm text-gray-600">
+                      Confidence Score
+                    </span>
                     <span className="font-medium">92%</span>
                   </div>
                 </div>
@@ -420,7 +444,9 @@ const Reports = () => {
         ) : (
           !isLoading && (
             <div className="flex items-center justify-center h-80">
-              <p className="text-gray-500 text-lg">No reports data available.</p>
+              <p className="text-gray-500 text-lg">
+                No reports data available.
+              </p>
             </div>
           )
         )}

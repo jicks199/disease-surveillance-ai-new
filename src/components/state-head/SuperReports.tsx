@@ -194,29 +194,26 @@ const SuperReports = ({ email, role }) => {
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-xl shadow-md relative">
-        {isLoading && (
-          <div className="absolute inset-0 flex justify-start items-center bg-gray-900 bg-opacity-40 z-10 backdrop-blur-[2px]">
-            <div className="relative flex items-center justify-center p-6 ml-8">
-              <div className="absolute w-32 h-32 rounded-full bg-blue-500/20 animate-ping"></div>
-              <div className="relative flex items-center gap-3 px-6 py-3 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-100">
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                  <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full animate-pulse"></div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-gray-800 font-medium text-sm tracking-tight">
-                    Processing
-                  </span>
-                  <span className="text-gray-500 text-xs animate-pulse">
-                    Please wait...
-                  </span>
-                </div>
-              </div>
-            </div>
+      {isLoading && (
+        <div className="absolute top-0 inset-0 flex justify-center mt-20 items-start bg-white/60 backdrop-blur-xl shadow-lg z-50">
+          
+          <div className="relative flex justify-center items-center">
+            {/* Glowing Loader with Ripple Effect */}
+            <div className="absolute animate-ping w-16 h-16 rounded-full bg-indigo-300 opacity-75"></div>
+            <div className="absolute animate-pulse w-12 h-12 rounded-full bg-indigo-400"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-opacity-80"></div>
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="flex justify-between items-center mb-6">
+      {/* Main Dashboard Content */}
+      <div
+        className={`space-y-6 transition-all duration-300 ${
+          isLoading ? "blur-md pointer-events-none select-none" : ""
+        }`}
+      >
+
+        {/* <div className="flex justify-between items-center mb-6"> */}
           <h2 className="text-xl font-semibold text-gray-900">
             AI-Generated Health Reports
           </h2>
