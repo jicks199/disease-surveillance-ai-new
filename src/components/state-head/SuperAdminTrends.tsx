@@ -30,20 +30,19 @@ const COLORS = [
 
 // Month names
 const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
   "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
-
 // Transform API data for charts
 const transformDataForCharts = (apiData, selectedDayRange) => {
   // Disease Distribution
