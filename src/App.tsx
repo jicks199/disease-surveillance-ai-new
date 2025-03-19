@@ -41,7 +41,6 @@ import SuperAdminUsers from "./pages/state-head/Users";
 
 import AdminLayout from "./components/district-head/AdminLayout";
 import DiseaseMap from "./pages/district-head/DiseaseMap";
-
 import SuperAdminLayout from "./components/state-head/SuperAdminLayout";
 import SuperDiseaseMap from "./pages/state-head/DiseaseMap";
 import Prediction from "./pages/citizen/Prediction";

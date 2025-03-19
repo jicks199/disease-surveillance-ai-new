@@ -14,3 +14,12 @@
 .animate-spin-slow {
     animation: spin-slow 60s linear infinite; /* 60-second rotation for a subtle effect */
 }
+
+.custom-lottie-marker {
+    background: none !important;
+    border: none !important;
+    z-index: 1000 !important;
+  }
+  .leaflet-container .custom-lottie-marker div {
+    pointer-events: none;
+  }
