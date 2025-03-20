@@ -138,7 +138,8 @@ const Dashboard = () => {
       };
 
       const response = await fetch(
-        "https://diseases-backend-pi.vercel.app/api/v1/hospital/getHospitals",
+        `${import.meta.env.VITE_API_VERCEL}/api/v1/hospital/getHospitals`,
+        // "https://diseases-backend-pi.vercel.app/api/v1/hospital/getHospitals",
         {
           method: "POST",
           headers: {
