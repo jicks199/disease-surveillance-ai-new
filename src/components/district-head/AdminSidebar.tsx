@@ -21,7 +21,7 @@ const AdminSidebar = ({ isOpen }) => {
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate('/login'); // Redirect to login page after logout
+    navigate('/district-head/login'); // Redirect to login page after logout
   };
 
   const menuItems = [

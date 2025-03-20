@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Minus, Upload, Loader2 } from "lucide-react";
 import Input from "../common/Input";
+import { useSelector } from "react-redux";
 
 // Updated schema
 const diseaseSchema = z.object({
@@ -121,7 +122,12 @@ const DiseaseDataEntry: React.FC = () => {
     "manual" | "upload" | null
   >(null);
   const [isDragging, setIsDragging] = React.useState(false);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // const { isAuth, role, email, hospitalId } = useSelector(
+  //   (state) => state.auth
+  // );
+  const hospitalId = useSelector((state) => state.auth.email);
 
   const {
     register,
@@ -208,7 +214,8 @@ const DiseaseDataEntry: React.FC = () => {
   };
 
   React.useEffect(() => {
-    const hospitalId = localStorage.getItem("hospital_id");
+    // console.log("is auth :" + isAuth + " and role : " + email);
+    console.log("Hospital ID:", hospitalId);
     if (hospitalId) {
       setValue("hospital_id", hospitalId);
     } else {
@@ -222,8 +229,6 @@ const DiseaseDataEntry: React.FC = () => {
   const onSubmit = async (data: DiseaseData) => {
     setIsSubmitting(true);
     setApiMessage(null);
-
-    const hospitalId = localStorage.getItem("hospital_id");
 
     if (!hospitalId) {
       setApiMessage({
@@ -311,7 +316,6 @@ const DiseaseDataEntry: React.FC = () => {
       return;
     }
 
-    const hospitalId = localStorage.getItem("hospital_id");
     if (!hospitalId) {
       setApiMessage({ type: "error", message: "Hospital ID is missing." });
       return;
