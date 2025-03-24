@@ -111,7 +111,7 @@ const Dashboard = () => {
     "Chhota Udaipur",
     "Dahod",
     "Dang",
-    "Devbhoomi Dwarka",
+    "Devbhoomi Dwarka", 
     "Gandhinagar",
     "Gir Somnath",
     "Jamnagar",
