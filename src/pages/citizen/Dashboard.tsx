@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -9,7 +9,10 @@ import {
   Legend,
   ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import {
   MapPin,
@@ -19,45 +22,16 @@ import {
   AlertTriangle,
   TrendingUp,
   Download,
-  Calendar,
-  // MessageSquare
+  Calendar
 } from 'lucide-react';
-// import io from 'socket.io-client';
-
-// const socket = io('http://127.0.0.1:5000');
 
 interface StatCardProps {
   icon: React.ElementType;
   title: string;
   value: number | string;
-  change: number;
+  change?: number;
   color?: string;
 }
-
-const initialData = [
-  { name: 'Jan', cases: 400, recoveries: 240, active: 160 },
-  { name: 'Feb', cases: 300, recoveries: 200, active: 100 },
-  { name: 'Mar', cases: 600, recoveries: 400, active: 200 },
-  { name: 'Apr', cases: 800, recoveries: 600, active: 200 },
-  { name: 'May', cases: 500, recoveries: 450, active: 50 },
-  { name: 'Jun', cases: 650, recoveries: 500, active: 150 },
-];
-
-const genderStats = {
-  male: 54,
-  female: 46
-};
-
-const ageGroupStats = [
-  { ageRange: "0-18 years", percentage: 15 },
-  { ageRange: "19-40 years", percentage: 45 },
-  { ageRange: "41-60 years", percentage: 30 },
-  { ageRange: "60+ years", percentage: 10 }
-];
-
-const mostAffectedAgeGroup = ageGroupStats.reduce((max, group) =>
-  group.percentage > max.percentage ? group : max
-);
 
 const StatCard = ({ icon: Icon, title, value, change, color = 'blue' }: StatCardProps) => (
   <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
@@ -68,44 +42,205 @@ const StatCard = ({ icon: Icon, title, value, change, color = 'blue' }: StatCard
       <div className="ml-4">
         <h3 className="text-sm font-medium text-gray-500">{title}</h3>
         <p className="text-2xl font-semibold text-gray-900">{value}</p>
-        <p className={`text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
-          {change >= 0 ? '+' : ''}{change}%
-          <TrendingUp className="h-4 w-4 ml-1" />
-          <span className="ml-1">from last month</span>
-        </p>
+        {change !== undefined && (
+          <p className={`text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
+            {change >= 0 ? '+' : ''}{change}%
+            <TrendingUp className="h-4 w-4 ml-1" />
+            <span className="ml-1">from last month</span>
+          </p>
+        )}
       </div>
     </div>
   </div>
 );
 
-const Dashboard = () => {
-  const [timeRange, setTimeRange] = useState('Last 30 days');
-  const [chartType, setChartType] = useState('line');
-  // const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  // const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+// Month names
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"
+];
 
-  // Handle SocketIO alerts
-  // useEffect(() => {
-  //   // socket.on('connect', () => console.log('Connected to SocketIO'));
-  //   socket.on('alert', (data: { message: string }) => {
-  //     console.log('Alert received:', data.message);
-  //     setAlertMessage(data.message);
-  //     setIsChatbotOpen(true);
-  //     setTimeout(() => {
-  //       setIsChatbotOpen(false);
-  //       setAlertMessage(null);
-  //     }, 10000); // Changed to 10 seconds
-  //   });
-  //   return () => {
-  //     socket.off('alert');
-  //     socket.off('connect');
-  //   };
-  // }, []);
+// Colors for charts
+const COLORS = [
+  "#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8",
+  "#82CA9D", "#FFC107", "#FF5722", "#A569BD", "#F08080"
+];
+
+// Transform API data for charts
+const transformDataForCharts = (apiData, selectedDayRange) => {
+  if (!apiData) return { monthlyDiseaseData: [], districtChartData: [] };
+
+  // Monthly Data Transformation
+  const currentDate = new Date();
+  const currentMonthIndex = currentDate.getMonth();
+
+  let monthsToShow;
+  switch (selectedDayRange) {
+    case 7:
+      monthsToShow = 1;
+      break;
+    case 30:
+      monthsToShow = 2;
+      break;
+    case 90:
+      monthsToShow = 4;
+      break;
+    case 180:
+      monthsToShow = 7;
+      break;
+    default:
+      monthsToShow = 4;
+  }
+
+  const filteredMonthlyData = apiData.monthlyData
+    ?.filter((month) => {
+      const monthIndex = month._id - 1;
+      const monthsBack = (currentMonthIndex - monthIndex + 12) % 12;
+      return monthsBack < monthsToShow;
+    })
+    .sort((a, b) => a._id - b._id) || [];
+
+  const monthlyDiseaseData = filteredMonthlyData.map((month) => ({
+    name: MONTH_NAMES[month._id - 1],
+    cases: month.diseases[0]?.cases || 0,
+    active: month.diseases[0]?.active_cases || 0,
+    recoveries: month.diseases[0]?.recovered_cases || 0,
+  }));
+
+  // District Data Transformation
+  const districtChartData = apiData.districtData?.map((district) => ({
+    name: district._id,
+    value: district.total_cases,
+    diseases: apiData.monthlyData[0]?.diseases?.map((d) => ({
+      name: d.name,
+      cases: Math.round(
+        d.cases * (district.total_cases / (apiData.stats.total_cases || 1))
+      ),
+    })) || [],
+  })) || [];
+
+  return { monthlyDiseaseData, districtChartData };
+};
+
+// Custom Tooltip for Monthly Chart
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 rounded shadow border">
+        <p className="font-semibold">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm" style={{ color: entry.stroke || entry.fill }}>
+            {entry.name}: {entry.value} cases
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// Custom Tooltip for District Pie Chart
+const DistrictTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    const district = payload[0].payload;
+    return (
+      <div className="bg-white p-3 rounded shadow border">
+        <p className="font-semibold">{district.name}</p>
+        <p>Total Cases: {district.value}</p>
+        <div className="mt-2">
+          <p className="font-medium">Disease Breakdown:</p>
+          {district.diseases.map((disease, index) => (
+            <p key={index} className="text-sm">
+              {disease.name}: {disease.cases}
+            </p>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+// Component for displaying "Data Not Available" message
+const DataNotAvailable = ({ message }) => (
+  <div className="h-80 flex items-center justify-center">
+    <p className="text-gray-500 text-lg">{message}</p>
+  </div>
+);
+
+const Dashboard = () => {
+  const [timeRange, setTimeRange] = useState(30);
+  const [district, setDistrict] = useState('Ahmedabad');
+  const [disease, setDisease] = useState('');
+  const [allDistrictData, setAllDistrictData] = useState(null);
+  const [chartType, setChartType] = useState('line');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const districts = [
+    'Ahmedabad', 'Amreli', 'Anand', 'Aravalli', 'Banaskantha', 'Bharuch', 
+    'Bhavnagar', 'Botad', 'Chhota Udaipur', 'Dahod', 'Dang', 'Devbhoomi Dwarka', 
+    'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kheda', 'Kutch', 
+    'Mahisagar', 'Mehsana', 'Morbi', 'Narmada', 'Navsari', 'Panchmahal', 
+    'Patan', 'Porbandar', 'Rajkot', 'Sabarkantha', 'Surat', 'Surendranagar', 
+    'Tapi', 'Vadodara', 'Valsad'
+  ];
+
+  const timeRanges = [
+    { label: 'Last 30 days', value: 30 },
+    { label: 'Last 3 months', value: 90 },
+    { label: 'Last 6 months', value: 180 }
+  ];
+
+  const fetchDashboardData = async (districtValue) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const payload = { days: timeRange, district: districtValue, disease };
+      const response = await fetch(
+        'https://diseases-backend.onrender.com/api/v1/user/dashboard/disease-records',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      setError('Failed to load dashboard data. Please try again.');
+      console.error(err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch data for selected district
+    fetchDashboardData(district).then(data => {
+      if (data) setDashboardData(data);
+    });
+    // Fetch data for all districts (empty district string)
+    fetchDashboardData('').then(data => {
+      if (data) setAllDistrictData(data);
+    });
+  }, [timeRange, district, disease]);
+
+  const { monthlyDiseaseData, districtChartData } = transformDataForCharts(allDistrictData || dashboardData, timeRange);
 
   const handleDownload = () => {
     const csvContent = "data:text/csv;charset=utf-8,"
-      + Object.keys(initialData[0]).join(",") + "\n"
-      + initialData.map(row => Object.values(row).join(",")).join("\n");
+      + "Month,Cases,Active,Recoveries\n"
+      + monthlyDiseaseData.map(row => `${row.name},${row.cases},${row.active},${row.recoveries}`).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -117,26 +252,49 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
+      {/* Centered Loading Overlay */}
+      {isLoading && (
+        <div className="absolute top-0 inset-0 flex justify-center mt-20 items-start bg-white/60 backdrop-blur-xl shadow-lg z-50">
+          <div className="relative flex justify-center items-center">
+            <div className="absolute animate-ping w-16 h-16 rounded-full bg-indigo-300 opacity-75"></div>
+            <div className="absolute animate-pulse w-12 h-12 rounded-full bg-indigo-400"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-opacity-80"></div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Disease Surveillance Dashboard</h1>
-          <p className="text-gray-600 mt-1">Real-time monitoring and analytics</p>
+          <h1 className="text-3xl font-bold text-gray-900">User Disease Dashboard</h1>
+          <p className="text-gray-600 mt-1">
+            Real-time monitoring for {district} (
+            {timeRanges.find(r => r.value === timeRange)?.label})
+          </p>
         </div>
         <div className="flex space-x-4 items-center">
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="pl-10 pr-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 appearance-none"
-            >
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 3 months</option>
-              <option>Last 6 months</option>
-            </select>
-          </div>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(Number(e.target.value))}
+            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-teal-300 focus:ring-opacity-50 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
+          >
+            {timeRanges.map((range) => (
+              <option key={range.value} value={range.value} className="bg-white text-gray-900">
+                {range.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-teal-300 focus:ring-opacity-50 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
+          >
+            {districts.map((dist) => (
+              <option key={dist} value={dist} className="bg-white text-gray-900">{dist}</option>
+            ))}
+          </select>
           <button
             onClick={handleDownload}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -148,115 +306,146 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        <StatCard icon={MapPin} title="Active Hotspots" value="12" change={5} color="blue" />
-        <StatCard icon={Thermometer} title="New Cases" value="234" change={-2} color="red" />
-        <StatCard icon={Users} title="Total Affected" value="1,234" change={8} color="purple" />
-        <StatCard icon={Activity} title="Recovery Rate" value="94%" change={3} color="green" />
-        <StatCard icon={AlertTriangle} title="Risk Level" value="Moderate" change={2} color="yellow" />
-
-        <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500">Gender Distribution</h3>
-          <div className="flex justify-between mt-2">
-            <div className="text-center">
-              <p className="text-2xl font-semibold text-blue-600">54%</p>
-              <p className="text-sm text-gray-500">Male</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-semibold text-pink-600">46%</p>
-              <p className="text-sm text-gray-500">Female</p>
-            </div>
-          </div>
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <p className="text-red-600">{error}</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            icon={Thermometer}
+            title="Total Cases"
+            value={dashboardData?.stats?.total_cases?.toLocaleString() || '0'}
+            color="red"
+          />
+          <StatCard
+            icon={Users}
+            title="Active Cases"
+            value={dashboardData?.stats?.active_cases?.toLocaleString() || '0'}
+            color="purple"
+          />
+          <StatCard
+            icon={Activity}
+            title="Recovery Rate"
+            value={dashboardData?.stats?.recovery_rate || '0%'}
+            color="green"
+          />
+          <StatCard
+            icon={AlertTriangle}
+            title="Mortality Rate"
+            value={dashboardData?.stats?.mortality_rate || '0%'}
+            color="yellow"
+          />
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500">Most Affected Age Group</h3>
-          <div className="mt-2">
-            <p className="text-2xl font-semibold text-gray-900">19-40 years</p>
-            <p className="text-sm text-gray-500">45% of cases</p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Chart Section */}
-      <div className="bg-white p-6 rounded-xl shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Disease Trend Analysis</h2>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setChartType('line')}
-              className={`px-3 py-1 rounded-md ${chartType === 'line' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-            >
-              Line
-            </button>
-            <button
-              onClick={() => setChartType('bar')}
-              className={`px-3 py-1 rounded-md ${chartType === 'bar' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-            >
-              Bar
-            </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Disease Trend Analysis */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Disease Trend Analysis (
+              {timeRanges.find(r => r.value === timeRange)?.label})
+            </h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setChartType('line')}
+                className={`px-3 py-1 rounded-md ${chartType === 'line' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
+                Line
+              </button>
+              <button
+                onClick={() => setChartType('bar')}
+                className={`px-3 py-1 rounded-md ${chartType === 'bar' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
+                Bar
+              </button>
+            </div>
+          </div>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === 'line' ? (
+                <LineChart data={monthlyDiseaseData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Line type="monotone" dataKey="cases" stroke="#3B82F6" strokeWidth={2} name="Cases" />
+                  <Line type="monotone" dataKey="recoveries" stroke="#10B981" strokeWidth={2} name="Recoveries" />
+                  <Line type="monotone" dataKey="active" stroke="#EF4444" strokeWidth={2} name="Active" />
+                </LineChart>
+              ) : (
+                <BarChart data={monthlyDiseaseData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="cases" fill="#3B82F6" name="Cases" />
+                  <Bar dataKey="recoveries" fill="#10B981" name="Recoveries" />
+                  <Bar dataKey="active" fill="#EF4444" name="Active" />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
           </div>
         </div>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'line' ? (
-              <LineChart data={initialData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip contentStyle={{ borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                <Legend />
-                <Line type="monotone" dataKey="cases" stroke="#3B82F6" strokeWidth={2} name="Cases" />
-                <Line type="monotone" dataKey="recoveries" stroke="#10B981" strokeWidth={2} name="Recoveries" />
-                <Line type="monotone" dataKey="active" stroke="#EF4444" strokeWidth={2} name="Active" />
-              </LineChart>
-            ) : (
-              <BarChart data={initialData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip contentStyle={{ borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                <Legend />
-                <Bar dataKey="cases" fill="#3B82F6" name="Cases" />
-                <Bar dataKey="recoveries" fill="#10B981" name="Recoveries" />
-                <Bar dataKey="active" fill="#EF4444" name="Active" />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
-        </div>
+
+        {/* District-wise Distribution */}
+        <section className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            District-wise Distribution (
+            {timeRanges.find((r) => r.value === timeRange)?.label || "Unknown"})
+          </h2>
+          {districtChartData.length > 0 ? (
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={districtChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {districtChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<DistrictTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <DataNotAvailable message="District data not available" />
+          )}
+        </section>
       </div>
 
-      {/* Additional Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Alerts</h3>
+      {/* Alerts Section */}
+      {dashboardData?.outbreakAlerts?.length > 0 && (
+        <div className="mt-6 bg-white p-6 rounded-xl shadow-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Outbreak Alerts</h3>
           <ul className="space-y-4">
-            <li className="flex items-center text-sm">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
-              <span>New cluster detected in Region A - 45 cases</span>
-            </li>
-            <li className="flex items-center text-sm">
-              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-              <span>Rising trend in Region B - 15% increase</span>
-            </li>
+            {dashboardData.outbreakAlerts.map((alert, index) => (
+              <li key={index} className="flex items-center text-sm">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
+                <span>
+                  {alert.disease} outbreak in {alert.district} - {alert.cases} cases on{' '}
+                  {new Date(alert.date).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-600">Avg. Daily Cases</p>
-              <p className="font-semibold">45</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Peak Month</p>
-              <p className="font-semibold">April</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      
+      )}
     </div>
   );
 };

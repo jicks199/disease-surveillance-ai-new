@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"; // Removed GeoJSON since we’re focusing on a single district
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { AlertTriangle } from "lucide-react";
 import { useSelector } from "react-redux";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const DiseaseMap = () => {
   const { email, role, district } = useSelector((state) => state.auth);
   const [selectedDayRange, setSelectedDayRange] = useState(7);
-  const [mapData, setMapData] = useState(null);
+  const [hotspots, setHotspots] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [mapCenter, setMapCenter] = useState([23.0225, 72.5714]); // Default: Ahmedabad
 
   // Check if user is authenticated and has a district
   if (!email || !role || !district) {
@@ -32,16 +34,47 @@ const DiseaseMap = () => {
     { label: "Last 1 Year", value: 365 },
   ];
 
-  // Fetch data from API for the specific district
-  const fetchMapData = async (days) => {
+  // District center coordinates (for fallback)
+  const districtCoordinates = {
+    Ahmedabad: [23.0225, 72.5714],
+    Amreli: [21.6032, 71.2182],
+    Gandhinagar: [23.2156, 72.6369],
+    Surat: [21.1702, 72.8311],
+    Vadodara: [22.3072, 73.1812],
+    Rajkot: [22.3039, 70.8022],
+    // Add more districts as needed
+  };
+
+  // Function to fetch coordinates from Nominatim
+  const fetchCoordinates = async (hotspotName) => {
+    try {
+      const query = `${hotspotName}, ${district}, Gujarat, India`;
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
+      );
+      const data = await response.json();
+      if (data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+      return null; // Return null if no coordinates found
+    } catch (err) {
+      console.error(`Error fetching coordinates for ${hotspotName}:`, err);
+      return null;
+    }
+  };
+
+  // Fetch hotspot data and coordinates
+  const fetchHotspotData = async (days) => {
     setIsLoading(true);
     setError(null);
     try {
-      const payload = { email, role, district, days }; // Include district in payload
+      // Fetch hotspot names from your API
+      const payload = { email, role, district, days };
       const response = await fetch(
-        `${
-          import.meta.env.VITE_API_VERCEL
-        }/api/v1/district-head/dashboard/disease-records`, // Updated to district-head endpoint
+        "https://diseases-backend.onrender.com/api/v1/district-head/dashboard/hotspots",
         {
           method: "POST",
           headers: {
@@ -52,28 +85,40 @@ const DiseaseMap = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch map data");
+        throw new Error("Failed to fetch hotspot data");
       }
 
       const data = await response.json();
-      
-      // Filter districtData to match the user's district
-      const districtInfo = data.districtData.find(
-        (d) => d._id.toLowerCase() === district.toLowerCase()
-      );
+      console.log("Hotspot API Response:", data);
 
-      if (!districtInfo) {
-        throw new Error(`No data found for district: ${district}`);
+      const hotspotList = data.hotspot[0]?.hotspot || [];
+
+      // Fetch coordinates for each hotspot
+      const hotspotsWithCoords = [];
+      for (const hotspot of hotspotList) {
+        const coords = await fetchCoordinates(hotspot);
+        hotspotsWithCoords.push({
+          name: hotspot,
+          lat: coords?.lat,
+          lng: coords?.lng,
+          cases: 0, // Add cases if API provides this later
+        });
+        // Respect Nominatim's rate limit (1 req/sec)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      setMapData({
-        ...data,
-        districtData: [districtInfo], // Only keep the user's district
-      });
+      setHotspots(hotspotsWithCoords);
+
+      // Set map center dynamically
+      if (hotspotsWithCoords.length > 0 && hotspotsWithCoords[0].lat && hotspotsWithCoords[0].lng) {
+        setMapCenter([hotspotsWithCoords[0].lat, hotspotsWithCoords[0].lng]);
+      } else {
+        setMapCenter(districtCoordinates[district] || [23.0225, 72.5714]);
+      }
     } catch (err) {
-      console.error("Error fetching map data:", err);
-      setError(err.message || "Failed to load map data. Please try again.");
-      setMapData(null);
+      console.error("Error fetching hotspot data:", err);
+      setError(err.message || "Failed to load hotspot data. Please try again.");
+      setHotspots([]);
     } finally {
       setIsLoading(false);
     }
@@ -81,62 +126,49 @@ const DiseaseMap = () => {
 
   useEffect(() => {
     if (email && role && district) {
-      fetchMapData(selectedDayRange);
+      fetchHotspotData(selectedDayRange);
     }
   }, [email, role, district, selectedDayRange]);
 
-  // Coordinate mapping for Gujarat districts
-  const districtCoordinates = {
-    Ahmedabad: [23.0225, 72.5714],
-    Amreli: [21.6032, 71.2182],
-    Gandhinagar: [23.2156, 72.6369],
-    Surat: [21.1702, 72.8311],
-    Vadodara: [22.3072, 73.1812],
-    Rajkot: [22.3039, 70.8022],
-  };
+  // Transform hotspot data for markers
+  const hotspotMarkers = hotspots.map((hotspot) => ({
+    position: hotspot.lat && hotspot.lng ? [hotspot.lat, hotspot.lng] : districtCoordinates[district] || [23.0225, 72.5714],
+    name: hotspot.name,
+    type: "hotspot",
+    cases: hotspot.cases || 0,
+  }));
 
-  // Transform API data for the single district marker
-  const outbreakData = mapData?.districtData.map((districtItem) => {
-    const totalCases = districtItem.total_cases;
-    const type =
-      totalCases > 10000 ? "critical" : totalCases > 100 ? "moderate" : "safe"; // Adjusted based on your sample (162 = moderate)
-
-    return {
-      position: districtCoordinates[districtItem._id] || [23.0225, 72.5714], // Fallback to Ahmedabad
-      type,
-      city: districtItem._id,
-      diseases: mapData.monthlyData[0]?.diseases || [],
-      totalCases,
-    };
-  }) || [];
-
+  // Custom marker icon
   const getColor = (type) => {
-    switch (type) {
-      case "critical":
-        return "text-red-500";
-      case "moderate":
-        return "text-orange-500";
-      case "safe":
-        return "text-green-500";
-      default:
-        return "text-gray-500";
-    }
+    return "#ef4444"; // Red for hotspots
   };
 
-  // Legend data for the single district
-  const legendData = outbreakData.length > 0 ? {
-    critical: outbreakData[0].type === "critical" ? [outbreakData[0].city] : [],
-    moderate: outbreakData[0].type === "moderate" ? [outbreakData[0].city] : [],
-    safe: outbreakData[0].type === "safe" ? [outbreakData[0].city] : [],
-  } : { critical: [], moderate: [], safe: [] };
+  const createMarkerIcon = (type) => {
+    const color = getColor(type);
+    return L.divIcon({
+      html: `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="2"/>
+          <circle cx="12" cy="12" r="4" fill="white"/>
+        </svg>
+      `,
+      className: "custom-marker",
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12],
+    });
+  };
 
   return (
     <div className="flex p-6 bg-gray-100 min-h-screen space-x-6">
       {/* Sidebar Legend */}
       <div className="w-1/4 bg-white p-6 rounded-xl shadow-md">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Outbreak Zone: {district}
+          Hotspot Zone: {district}
         </h2>
+        <h3 className="text-lg font-medium text-gray-700 mb-4">
+          Total Areas: {hotspots.length}
+        </h3>
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Select Time Range:
@@ -167,26 +199,7 @@ const DiseaseMap = () => {
             <li className="flex items-center">
               <AlertTriangle className="text-red-500 mr-2 h-5 w-5" />
               <span className="text-sm">
-                Critical Zone{" "}
-                {legendData.critical.length > 0
-                  ? `(${legendData.critical[0]})`
-                  : "(None)"}
-              </span>
-            </li>
-            <li className="flex items-center">
-              <AlertTriangle className="text-orange-500 mr-2 h-5 w-5" />
-              <span className="text-sm">
-                Moderate Risk{" "}
-                {legendData.moderate.length > 0
-                  ? `(${legendData.moderate[0]})`
-                  : "(None)"}
-              </span>
-            </li>
-            <li className="flex items-center">
-              <AlertTriangle className="text-green-500 mr-2 h-5 w-5" />
-              <span className="text-sm">
-                Safe Zone{" "}
-                {legendData.safe.length > 0 ? `(${legendData.safe[0]})` : "(None)"}
+                Affected Areas: {hotspots.length}
               </span>
             </li>
           </ul>
@@ -196,29 +209,28 @@ const DiseaseMap = () => {
       {/* Map Section */}
       <div className="w-3/4 h-[600px] bg-white rounded-xl shadow-md overflow-hidden">
         <MapContainer
-          center={districtCoordinates[district] || [23.0225, 72.5714]} // Center on the district
-          zoom={10} // Closer zoom for single district
+          center={mapCenter}
+          zoom={11}
           className="h-full w-full"
         >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
 
-          {/* Single District Marker */}
-          {outbreakData.map((data, idx) => (
-            <Marker key={idx} position={data.position}>
+          {/* Hotspot Markers */}
+          {hotspotMarkers.map((data, idx) => (
+            <Marker
+              key={idx}
+              position={data.position}
+              icon={createMarkerIcon(data.type)}
+            >
               <Popup>
-                <div className={`font-bold ${getColor(data.type)}`}>
-                  {data.city} - {data.type.toUpperCase()} Zone
+                <div style={{ color: getColor(data.type) }} className="font-bold">
+                  {data.name} - Hotspot
                 </div>
                 <div className="mt-2">
-                  <p>Total Cases: {data.totalCases.toLocaleString()}</p>
-                  <p className="text-sm font-semibold mt-1">Disease Breakdown:</p>
-                  <ul className="text-xs space-y-1">
-                    {data.diseases.map((disease, index) => (
-                      <li key={index}>
-                        {disease.name}: {disease.cases.toLocaleString()} cases
-                      </li>
-                    ))}
-                  </ul>
+                  <p>Cases: {data.cases.toLocaleString()}</p>
                 </div>
               </Popup>
             </Marker>

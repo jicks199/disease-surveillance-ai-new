@@ -31,7 +31,8 @@ const UserManagement = () => {
 
         // Make POST request to get hospital data
         const response = await axios.post(
-          'https://diseases-backend-pi.vercel.app/api/v1/hospital/getHospitals',
+          `${import.meta.env.VITE_API_VERCEL}/api/v1/hospital/getHospitals`,
+          // 'https://diseases-backend-pi.vercel.app/api/v1/hospital/getHospitals',
           requestBody
         );
         
