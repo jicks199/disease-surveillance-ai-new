@@ -71,7 +71,7 @@ const CustomTooltip = ({ active, payload }) => {
 
 const Reports = () => {
   const { email, role, district } = useSelector((state) => state.auth); // Get from Redux
-  const [selectedDayRange, setSelectedDayRange] = useState(5);
+  const [selectedDayRange, setSelectedDayRange] = useState(7);
   const [reportData, setReportData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
