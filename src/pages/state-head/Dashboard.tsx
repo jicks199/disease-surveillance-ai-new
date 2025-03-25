@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import AdminTrends from "../../components/state-head/SuperAdminTrends"; // Assuming this is SuperAdminTrends
 import SuperAlerts from "../../components/state-head/SuperOutbreakAlerts";
+import Lottie from 'lottie-react';
+import loadingAnimation from '../../assets/Loader.json';
 import {
   Activity,
   Users,
@@ -215,16 +217,17 @@ const Dashboard = () => {
     <div className="relative min-h-screen p-6">
       {/* Centered Loading Overlay */}
       {isLoading && (
-        <div className="absolute top-0 inset-0 flex justify-center mt-20 items-start bg-white/60 backdrop-blur-xl shadow-lg z-50">
-          
-          <div className="relative flex justify-center items-center">
-            {/* Glowing Loader with Ripple Effect */}
-            <div className="absolute animate-ping w-16 h-16 rounded-full bg-indigo-300 opacity-75"></div>
-            <div className="absolute animate-pulse w-12 h-12 rounded-full bg-indigo-400"></div>
-            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-opacity-80"></div>
-          </div>
-        </div>
-      )}
+  <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-white/40 backdrop-blur-3xl z-50">
+    <div className="flex-col relative flex justify-center items-center">
+      <Lottie 
+        animationData={loadingAnimation} 
+        loop={true} 
+        className="w-60 h-60"
+      />
+      <h1 className="text-xl font-semibold text-gray-900 mt-2">Loading... Please wait</h1>
+    </div>
+  </div>
+)}
 
       {/* Main Dashboard Content */}
       <div

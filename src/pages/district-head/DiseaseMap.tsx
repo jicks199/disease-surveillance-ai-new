@@ -4,6 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { useSelector } from "react-redux";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import Lottie from 'lottie-react';
+import loadingAnimation from '../../assets/Loader.json';
 
 const DiseaseMap = () => {
   const { email, role, district } = useSelector((state) => state.auth);
@@ -191,7 +193,16 @@ const DiseaseMap = () => {
           </select>
         </div>
         {isLoading ? (
-          <p className="text-gray-500 text-center">Loading...</p>
+           <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-white/40 backdrop-blur-3xl z-50">
+           <div className="flex-col relative flex justify-center items-center">
+             <Lottie 
+               animationData={loadingAnimation} 
+               loop={true} 
+               className="w-60 h-60"
+             />
+             <h1 className="text-xl font-semibold text-gray-900 mt-2">Loading... Please wait</h1>
+           </div>
+         </div>
         ) : error ? (
           <p className="text-red-600 text-center">{error}</p>
         ) : (
