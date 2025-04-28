@@ -4,15 +4,15 @@
 **HealthGuard** is an AI-powered disease surveillance system developed under **SSIP 2.0** for **Gujarat Informatics Limited**.  
 The platform enhances outbreak detection, real-time monitoring, and healthcare resource optimization by leveraging machine learning, AI forecasting, and predictive analytics.
 
-Team Members & Roles :
-● Patel Harsh Satishkumar - Data Scientist
-● Kumar Parva Digvijay - Data Scientist
-● Gami Krutik Jagdishbhai - Backend Developer
-● Datardi Mohsinali Gulamali - Backend Developer
-● Parmar Kaushal Rajnikant - Backend Developer
-● Darji Dhairya Bharatbhai - Frontend Developer
-● Panchal Kshitij Pravinbhai - Frontend Developer
-● Patel Jeet Chetankumar - Frontend Developer
+## Team Members & Roles :
+- Patel Harsh Satishkumar - Data Scientist
+- Kumar Parva Digvijay - Data Scientist
+- Gami Krutik Jagdishbhai - Backend Developer
+- Datardi Mohsinali Gulamali - Backend Developer
+- Parmar Kaushal Rajnikant - Backend Developer
+- Darji Dhairya Bharatbhai - Frontend Developer
+- Panchal Kshitij Pravinbhai - Frontend Developer
+- Patel Jeet Chetankumar - Frontend Developer
 
 ---
 
